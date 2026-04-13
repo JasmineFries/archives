@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>人物关系网</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0e0e1a;color:#ddd;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── 顶部预设栏 ── */
+#preset-bar{
+  flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 16px;background:#0c0c18;border-bottom:1px solid #2a2a3e;
+  font-size:.82rem;
+}
+#preset-bar .pb-label{color:#a78bfa;font-weight:600;letter-spacing:1px;margin-right:4px}
+#preset-bar select{width:160px;padding:5px 8px;background:#13131f;border:1px solid #2a2a3e;color:#ddd;border-radius:6px;font-size:.82rem;outline:none}
+#preset-bar select:focus{border-color:#a78bfa}
+#preset-bar button{padding:5px 12px;border:1px solid;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;transition:.15s}
+.pb-load{background:transparent;border-color:#a78bfa;color:#a78bfa}
+.pb-load:hover{background:#a78bfa;color:#fff}
+.pb-save{background:transparent;border-color:#34d399;color:#34d399}
+.pb-save:hover{background:#34d399;color:#fff}
+.pb-new{background:transparent;border-color:#60a5fa;color:#60a5fa}
+.pb-new:hover{background:#60a5fa;color:#fff}
+.pb-del{background:transparent;border-color:#e94560;color:#e94560}
+.pb-del:hover{background:#e94560;color:#fff}
+.pb-sep{width:1px;height:20px;background:#2a2a3e;margin:0 4px}
+#pb-status{color:#888;font-size:.78rem;margin-left:6px}
+
+/* ── 主体三列 ── */
+#main{flex:1;display:flex;overflow:hidden}
+
+/* ── 左侧面板 ── */
+#sidebar{width:240px;min-width:240px;background:#13131f;border-right:1px solid #2a2a3e;display:flex;flex-direction:column;overflow:hidden}
+#sidebar h2{padding:12px 14px;font-size:.9rem;letter-spacing:2px;color:#a78bfa;border-bottom:1px solid #2a2a3e;flex-shrink:0}
+#person-list{flex:1;overflow-y:auto;padding:6px}
+.person-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:.15s}
+.person-item:hover{background:#1e1e32}
+.person-item.selected{background:#2a2040}
+.p-avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.9rem;color:#fff;overflow:hidden;background:#333}
+.p-avatar img{width:100%;height:100%;object-fit:cover}
+.person-name{font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.person-role{font-size:.72rem;color:#888}
+.btn-del{margin-left:auto;flex-shrink:0;background:none;border:none;color:#444;cursor:pointer;font-size:.8rem;padding:2px 5px;border-radius:4px}
+.btn-del:hover{color:#e94560;background:#2a1825}
+
+/* ── 中央画布 ── */
+#canvas-wrap{flex:1;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#tip{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#1a1a2ecc;border:1px solid #2a2a3e;padding:5px 14px;border-radius:20px;font-size:.75rem;color:#555;pointer-events:none;white-space:nowrap}
+#tooltip{position:absolute;pointer-events:none;background:#1e1e32;border:1px solid #3d2e6e;border-radius:8px;padding:6px 10px;font-size:.8rem;color:#ddd;display:none;max-width:180px;line-height:1.5}
+
+/* ── 右侧面板 ── */
+#panel{width:300px;min-width:300px;background:#13131f;border-left:1px solid #2a2a3e;display:flex;flex-direction:column;overflow:hidden}
+#panel-tabs{display:flex;border-bottom:1px solid #2a2a3e;flex-shrink:0}
+.ptab{flex:1;padding:9px 4px;text-align:center;font-size:.78rem;cursor:pointer;color:#666;border-bottom:2px solid transparent;transition:.15s}
+.ptab:hover{color:#aaa}
+.ptab.active{color:#a78bfa;border-bottom-color:#a78bfa}
+.tab-pane{display:none;flex:1;overflow-y:auto;padding:12px 14px}
+.tab-pane.active{display:block}
+
+/* ── 表单控件 ── */
+.section-title{font-size:.75rem;letter-spacing:1px;color:#a78bfa;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid #1e1e2e;font-weight:600}
+.section-title:first-child{margin-top:0}
+label{display:block;font-size:.75rem;color:#777;margin-bottom:3px;margin-top:7px}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;background:#0e0e1a;border:1px solid #2a2a3e;color:#ddd;
+  border-radius:6px;padding:6px 8px;font-size:.82rem;outline:none;transition:.15s
+}
+input:focus,select:focus,textarea:focus{border-color:#a78bfa}
+textarea{resize:vertical;min-height:52px;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+
+/* ── 头像上传 ── */
+.avatar-upload-wrap{display:flex;align-items:center;gap:10px;margin-top:8px}
+#f-avatar-preview{
+  width:52px;height:52px;border-radius:50%;background:#1a1a2e;border:2px dashed #2a2a3e;
+  display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#555;
+  cursor:pointer;overflow:hidden;flex-shrink:0;transition:.15s;text-align:center;line-height:1.3
+}
+#f-avatar-preview:hover{border-color:#a78bfa}
+#f-avatar-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.color-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.color-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s;flex-shrink:0}
+.color-dot.picked{border-color:#fff;transform:scale(1.2)}
+.btn{display:block;width:100%;padding:8px;margin-top:10px;border:none;border-radius:7px;cursor:pointer;font-size:.85rem;font-weight:600;transition:.15s}
+.btn-primary{background:#a78bfa;color:#fff}
+.btn-primary:hover{background:#c4b5fd}
+.btn-sm{display:inline-block;width:auto;padding:4px 10px;font-size:.78rem;margin-top:0}
+.btn-secondary{background:#1e1e32;color:#aaa;border:1px solid #2a2a3e}
+.btn-secondary:hover{background:#2a2a40;color:#ddd}
+.btn-danger{background:#e9456018;color:#e94560;border:1px solid #e9456044}
+.btn-danger:hover{background:#e94560;color:#fff}
+
+/* ── 详情卡 ── */
+.detail-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.detail-av{width:60px;height:60px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;color:#fff;overflow:hidden}
+.detail-av img{width:100%;height:100%;object-fit:cover}
+.detail-name{font-size:1.1rem;font-weight:700}
+.detail-sub{font-size:.78rem;color:#888;margin-top:2px}
+.detail-table{width:100%;font-size:.8rem;border-collapse:collapse;margin-top:6px}
+.detail-table td{padding:4px 4px;vertical-align:top;line-height:1.5}
+.detail-table td:first-child{color:#888;white-space:nowrap;width:62px}
+.detail-table td:last-child{color:#ccc}
+.detail-block{background:#0d0d1a;border-radius:6px;padding:8px;font-size:.8rem;color:#bbb;line-height:1.7;margin-top:4px}
+.rel-tag{display:inline-flex;align-items:center;gap:4px;background:#2a2040;border:1px solid #3d2e6e;
+  border-radius:12px;padding:3px 8px;font-size:.73rem;color:#c4b5fd;margin:2px;cursor:pointer}
+.rel-tag:hover{background:#3a2850;border-color:#6d4fa8}
+.rel-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── 滚动条 ── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#0e0e1a}
+::-webkit-scrollbar-thumb{background:#2a2a3e;border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:#3a3a50}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<!-- ══ 顶部预设栏 ══ -->
+<div id="preset-bar">
+  <span class="pb-label">📦 预设</span>
+  <select id="preset-select"></select>
+  <button class="pb-load" onclick="loadPreset()">加载</button>
+  <div class="pb-sep"></div>
+  <button class="pb-save" onclick="saveCurrentPreset()">覆盖保存</button>
+  <button class="pb-new" onclick="saveAsNewPreset()">另存为新预设</button>
+  <button class="pb-del" onclick="deletePreset()">删除预设</button>
+  <div class="pb-sep"></div>
+  <button style="background:transparent;border-color:#facc15;color:#facc15;padding:5px 12px;border:1px solid;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;" onclick="setGlobalPassword()">🔑 设置密码</button>
+  <button style="background:transparent;border-color:#a78bfa;color:#a78bfa;padding:5px 12px;border:1px solid;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;" onclick="togglePresetEncryption()">🔒 预设加密</button>
+  <div class="pb-sep"></div>
+  <button style="background:transparent;border-color:#22d3ee;color:#22d3ee;padding:5px 12px;border:1px solid;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;" onclick="toggleThemePanel()">🎨 外观设置</button>
+  <span id="pb-status"></span>
+</div>
+
+<!-- ══ 外观设置浮层 ══ -->
+<div id="theme-panel" style="display:none;position:fixed;top:48px;right:16px;z-index:999;
+  background:#13131f;border:1px solid #3d2e6e;border-radius:12px;padding:18px 20px;
+  width:320px;box-shadow:0 8px 40px #000a;color:#ddd;font-size:.82rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <span style="color:#22d3ee;font-weight:700;letter-spacing:1px;font-size:.9rem">🎨 外观设置</span>
+    <button onclick="toggleThemePanel()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1rem">✕</button>
+  </div>
+
+  <!-- 背景色 -->
+  <div style="margin-bottom:10px">
+    <div style="color:#a78bfa;font-size:.75rem;font-weight:600;margin-bottom:6px;border-bottom:1px solid #1e1e2e;padding-bottom:3px">🖼 画布背景</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="margin:0;color:#888;font-size:.75rem">纯色背景</label>
+      <input type="color" id="th-bg-color" value="#0e0e1a"
+        style="width:36px;height:28px;border:none;border-radius:4px;cursor:pointer;background:none;padding:0"
+        oninput="applyTheme()">
+      <button class="btn btn-sm btn-secondary" style="margin:0" onclick="document.getElementById('th-bg-img-input').click()">上传背景图</button>
+      <input type="file" id="th-bg-img-input" accept="image/*" style="display:none">
+      <button class="btn btn-sm btn-danger" style="margin:0" onclick="clearBgImage()">清除图片</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <label style="margin:0;color:#888;font-size:.75rem;white-space:nowrap">图片透明度</label>
+      <input type="range" id="th-bg-opacity" min="0" max="100" value="100"
+        style="flex:1;accent-color:#22d3ee" oninput="applyTheme();document.getElementById('th-bg-opacity-val').textContent=this.value+'%'">
+      <span id="th-bg-opacity-val" style="color:#22d3ee;width:36px;text-align:right;font-size:.75rem">100%</span>
+    </div>
+    <div style="margin-top:6px;font-size:.72rem;color:#555">快速预设背景色：</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="bg-presets"></div>
+  </div>
+
+  <!-- 关系线颜色 -->
+  <div style="margin-bottom:10px">
+    <div style="color:#a78bfa;font-size:.75rem;font-weight:600;margin-bottom:6px;border-bottom:1px solid #1e1e2e;padding-bottom:3px">🔗 关系线颜色</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:.72rem;color:#888;white-space:nowrap">🟣 友好</span>
+        <input type="color" id="th-col-friend" value="#a78bfa" style="width:32px;height:24px;border:none;border-radius:4px;cursor:pointer;padding:0" oninput="applyTheme()">
+        <button onclick="resetRelColor('friend')" style="background:none;border:none;color:#555;cursor:pointer;font-size:.7rem" title="重置">↺</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:.72rem;color:#888;white-space:nowrap">🟢 亲属</span>
+        <input type="color" id="th-col-family" value="#34d399" style="width:32px;height:24px;border:none;border-radius:4px;cursor:pointer;padding:0" oninput="applyTheme()">
+        <button onclick="resetRelColor('family')" style="background:none;border:none;color:#555;cursor:pointer;font-size:.7rem" title="重置">↺</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:.72rem;color:#888;white-space:nowrap">🔴 对立</span>
+        <input type="color" id="th-col-rival" value="#e94560" style="width:32px;height:24px;border:none;border-radius:4px;cursor:pointer;padding:0" oninput="applyTheme()">
+        <button onclick="resetRelColor('rival')" style="background:none;border:none;color:#555;cursor:pointer;font-size:.7rem" title="重置">↺</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:.72rem;color:#888;white-space:nowrap">⚪ 中性</span>
+        <input type="color" id="th-col-neutral" value="#888888" style="width:32px;height:24px;border:none;border-radius:4px;cursor:pointer;padding:0" oninput="applyTheme()">
+        <button onclick="resetRelColor('neutral')" style="background:none;border:none;color:#555;cursor:pointer;font-size:.7rem" title="重置">↺</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自定义类型颜色（动态区） -->
+  <div style="margin-bottom:10px">
+    <div style="color:#a78bfa;font-size:.75rem;font-weight:600;margin-bottom:6px;border-bottom:1px solid #1e1e2e;padding-bottom:3px">✨ 自定义类型颜色</div>
+    <div id="th-custom-rel-colors" style="display:flex;flex-direction:column;gap:5px">
+      <span style="color:#555;font-size:.72rem">（暂无自定义类型）</span>
+    </div>
+  </div>
+
+  <!-- 节点文字颜色 -->
+  <div>
+    <div style="color:#a78bfa;font-size:.75rem;font-weight:600;margin-bottom:6px;border-bottom:1px solid #1e1e2e;padding-bottom:3px">🔤 节点文字颜色</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="margin:0;color:#888;font-size:.75rem;white-space:nowrap">文字颜色</label>
+      <input type="color" id="th-node-text" value="#ffffff"
+        style="width:36px;height:28px;border:none;border-radius:4px;cursor:pointer;padding:0"
+        oninput="applyTheme()">
+      <button onclick="document.getElementById('th-node-text').value='#ffffff';applyTheme()"
+        style="background:none;border:1px solid #2a2a3e;border-radius:4px;color:#aaa;cursor:pointer;font-size:.72rem;padding:2px 6px">重置</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <label style="margin:0;color:#888;font-size:.75rem;white-space:nowrap">标签文字颜色</label>
+      <input type="color" id="th-label-text" value=""
+        style="width:36px;height:28px;border:none;border-radius:4px;cursor:pointer;padding:0"
+        oninput="applyTheme()">
+      <label style="margin:0;display:flex;align-items:center;gap:4px;font-size:.72rem;color:#888;cursor:pointer">
+        <input type="checkbox" id="th-label-follow-rel" checked onchange="applyTheme()" style="width:auto">跟随关系色
+      </label>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;display:flex;gap:8px">
+    <button class="btn btn-primary btn-sm" style="flex:1" onclick="saveThemeToStorage()">💾 保存设置</button>
+    <button class="btn btn-secondary btn-sm" onclick="resetAllTheme()">全部重置</button>
+  </div>
+</div>
+
+<!-- ══ 主体 ══ -->
+<div id="main">
+
+<!-- 左侧：人物列表 -->
+<div id="sidebar">
+  <h2>👤 人物列表（<span id="person-count">0</span>）</h2>
+  <div id="person-list"></div>
+</div>
+
+<!-- 中央：关系图 -->
+<div id="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div id="tip">左键拖拽节点 · 右键空白处快速添加 · 单击查看详情</div>
+  <div id="tooltip"></div>
+</div>
+
+<!-- 右侧：操作面板 -->
+<div id="panel">
+  <div id="panel-tabs" style="flex-wrap: wrap;">
+    <div class="ptab active" onclick="switchTab('add')">＋ 人物</div>
+    <div class="ptab" onclick="switchTab('rel')">🔗 关系</div>
+    <div class="ptab" onclick="switchTab('detail')">📋 详情</div>
+    <div class="ptab" onclick="switchTab('story')">📖 故事</div>
+    <div class="ptab" onclick="switchTab('search')">🔍 搜索</div>
+  </div>
+
+  <!-- ── Tab1: 添加人物 ── -->
+  <div class="tab-pane active" id="tab-add">
+
+    <div class="section-title">基本信息</div>
+    <label>姓名 *</label>
+    <input type="text" id="f-name" placeholder="例：诸葛亮">
+    <div class="row2">
+      <div><label>字 / 别名</label><input type="text" id="f-alias" placeholder="字孔明"></div>
+      <div><label>势力 / 阵营</label><input type="text" id="f-faction" placeholder="蜀汉"></div>
+    </div>
+    <label>身份 / 职位</label>
+    <input type="text" id="f-role" placeholder="例：丞相">
+    <label>人物标签（用半角逗号分隔）</label>
+    <input type="text" id="f-tags" placeholder="例：蜀汉,文臣,智者">
+
+    <div class="section-title">个人信息</div>
+    <div class="row3">
+      <div>
+        <label>性别</label>
+        <select id="f-gender">
+          <option value="">—</option>
+          <option>男</option><option>女</option><option>其他</option>
+        </select>
+      </div>
+      <div><label>年龄</label><input type="text" id="f-age" placeholder="约27岁"></div>
+      <div><label>身高</label><input type="text" id="f-height" placeholder="180cm"></div>
+    </div>
+    <label>生日</label>
+    <input type="text" id="f-birthday" placeholder="例：建安四年 / 181年">
+
+    <div class="section-title">外貌与性格</div>
+    <label>外貌特征</label>
+    <textarea id="f-appearance" placeholder="身形、面貌、服饰等描述…" style="min-height:44px"></textarea>
+    <label>性格特点</label>
+    <textarea id="f-personality" placeholder="性格关键词或描述，如：沉稳、足智多谋、忠君…" style="min-height:44px"></textarea>
+
+    <div class="section-title">背景与目标</div>
+    <label>出身 / 背景</label>
+    <textarea id="f-background" placeholder="家世、成长经历…" style="min-height:44px"></textarea>
+    <label>技能 / 特长</label>
+    <textarea id="f-skills" placeholder="擅长领域、武器、技艺…" style="min-height:44px"></textarea>
+    <label>人生目标</label>
+    <input type="text" id="f-goal" placeholder="例：匡扶汉室，还于旧都">
+    <label>座右铭 / 名言</label>
+    <input type="text" id="f-motto" placeholder="例：鞠躬尽瘁，死而后已">
+    <label>综合简介</label>
+    <textarea id="f-desc" placeholder="其他补充说明…" style="min-height:44px"></textarea>
+
+    <div class="section-title">隐私与加密</div>
+    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#eee;">
+      <input type="checkbox" id="f-encrypted" style="width:auto;"> <span>将此人物设为加密可见 (需设置全局密码)</span>
+    </label>
+
+    <div class="section-title">头像设置</div>
+    <div class="avatar-upload-wrap">
+      <div id="f-avatar-preview" onclick="document.getElementById('f-avatar-input').click()" title="点击上传图片">
+        <span id="f-avatar-hint">点击<br>上传</span>
+      </div>
+      <input type="file" id="f-avatar-input" accept="image/*" style="display:none">
+      <div style="flex:1">
+        <div style="font-size:.75rem;color:#777;margin-bottom:6px">或选择颜色</div>
+        <div class="color-row" id="color-picker"></div>
+        <button class="btn btn-sm btn-secondary" style="margin-top:8px" onclick="clearAvatar()">清除头像</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="addPerson()" style="margin-top:14px">添加人物</button>
+  </div>
+
+  <!-- ── Tab2: 添加关系 ── -->
+  <div class="tab-pane" id="tab-rel">
+    <div class="section-title">建立关系</div>
+    <label>人物 A</label>
+    <select id="r-a"></select>
+    <label>关系描述</label>
+    <input type="text" id="r-label" placeholder="例：师徒、结义兄弟、对手…">
+    <label>人物 B</label>
+    <select id="r-b"></select>
+    <label>关系类型（影响连线颜色）</label>
+    <select id="r-type"></select>
+    <label>备注</label>
+    <textarea id="r-note" placeholder="关系补充说明…" style="min-height:44px"></textarea>
+    <button class="btn btn-primary" onclick="addRelation()">建立关系</button>
+
+    <!-- 自定义关系类型管理 -->
+    <div class="section-title" style="margin-top:20px">🎨 自定义关系类型</div>
+    <div style="background:#1a1a2e;border:1px solid #2a2a3e;border-radius:8px;padding:10px">
+      <div style="font-size:.73rem;color:#666;margin-bottom:8px">添加后可在上方「关系类型」下拉框中选择</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="crt-name" placeholder="类型名 例：盟友" style="flex:1;min-width:70px">
+        <input type="color" id="crt-color" value="#f59e0b"
+          style="width:34px;height:32px;border:none;border-radius:5px;cursor:pointer;padding:0;background:none;flex-shrink:0"
+          title="选择连线颜色">
+        <button class="btn btn-primary btn-sm" onclick="addCustomRelType()" style="flex-shrink:0">添加</button>
+      </div>
+      <div id="custom-rel-type-list" style="margin-top:10px"></div>
+    </div>
+
+    <div class="section-title" style="margin-top:18px">所有关系（<span id="rel-count">0</span>）</div>
+    <div id="all-rels-list" style="margin-top:4px"></div>
+  </div>
+
+  <!-- ── Tab3: 人物详情 ── -->
+  <div class="tab-pane" id="tab-detail">
+    <div id="detail-empty" style="color:#555;font-size:.85rem;text-align:center;margin-top:40px">
+      点击画布中的节点<br>或左侧人物列表查看详情
+    </div>
+    <div id="detail-card" style="display:none">
+      <div class="detail-head">
+        <div class="detail-av" id="d-av"></div>
+        <div>
+          <div class="detail-name" id="d-name"></div>
+          <div class="detail-sub" id="d-sub"></div>
+        </div>
+      </div>
+      <table class="detail-table" id="d-table"></table>
+      <div id="d-blocks"></div>
+      <div style="margin-top:10px;font-size:.75rem;color:#888;margin-bottom:4px">相关关系</div>
+      <div id="d-rels"></div>
+      <div style="display:flex; gap:8px;">
+         <button class="btn btn-secondary" style="margin-top:12px" id="d-btn-encrypt" onclick="togglePersonEncryption(selectedId)">加密人物</button>
+         <button class="btn btn-danger" style="margin-top:12px; flex:1;" onclick="deletePerson(selectedId)">删除此人物</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab4: 故事合集 ── -->
+  <div class="tab-pane" id="tab-story">
+    
+    <div class="section-title">合集管理</div>
+    <div style="background:#1e1e32; padding:10px; border-radius:6px; margin-bottom:15px; border:1px solid #2a2a3e;">
+      <label style="margin-top:0;">创建新合集</label>
+      <input type="text" id="sc-name" placeholder="输入合集名称...">
+      <label>合集封面图</label>
+      <input type="file" id="sc-cover" accept="image/*" style="font-size:0.75rem; margin-bottom:6px; color:#aaa;">
+      <button class="btn btn-sm btn-secondary" style="width:100px;" onclick="addCollection()">创建合集</button>
+    </div>
+
+    <div class="section-title">故事编辑与添加 (<span id="editing-mode-text">新建模式</span>)</div>
+    <div style="background:#1e1e32; padding:10px; border-radius:6px; margin-bottom:15px; border:1px solid #2a2a3e;">
+        <input type="hidden" id="s-id" value="">
+        <label style="margin-top:0;">故事标题</label>
+        <input type="text" id="s-title" placeholder="输入故事标题...">
+        <label>所属合集</label>
+        <select id="s-collection" style="margin-bottom:6px;"></select>
+        <label>故事封面图</label>
+        <input type="file" id="s-cover" accept="image/*" style="font-size:0.75rem; margin-bottom:6px; color:#aaa;">
+        <label>故事涉及人物 (按住Ctrl多选)</label>
+        <select id="s-persons" multiple style="width:100%; height:110px; background:#0e0e1a; border:1px solid #2a2a3e; color:#ddd; border-radius:6px; padding:6px; margin-top:4px; outline:none; font-family:inherit;"></select>
+        <label>故事标签 (多标签用逗号分隔)</label>
+        <input type="text" id="s-tags" placeholder="标签1, 标签2...">
+        <label>故事正文 (支持 Markdown)</label>
+        <textarea id="s-content" style="min-height: 120px;" placeholder="支持 markdown 渲染..."></textarea>
+        <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" onclick="saveStory()" style="margin-top:10px;">保存故事</button>
+            <button class="btn btn-secondary" onclick="cancelStoryEdit()" style="margin-top:10px; display:none;" id="s-cancel-btn">取消编辑</button>
+        </div>
+    </div>
+
+    <div class="section-title" style="margin-top:20px;">所有故事合集 (<span id="story-count">0</span> 个故事)</div>
+    <div id="story-list" style="margin-top:10px"></div>
+  </div>
+
+  <!-- ── Tab5: 搜索与筛选 ── -->
+  <div class="tab-pane" id="tab-search">
+    <div class="section-title">搜索人物 / 标签</div>
+    <label>关键词 (匹配姓名或人物标签)</label>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <input type="text" id="filter-kw" placeholder="输入关键词回车搜索..." onkeydown="if(event.key==='Enter') applyFilters()">
+        <button class="btn btn-primary" style="margin:0;width:auto;" onclick="applyFilters()">搜索</button>
+    </div>
+    
+    <label>高亮某个人的关系网 (屏蔽其余节点)</label>
+    <select id="filter-person" onchange="applyFilters()"></select>
+    
+    <button class="btn btn-secondary" onclick="clearFilters()" style="margin-top:12px">清除所有搜索和筛选</button>
+
+    <div class="section-title" style="margin-top:20px;">聚合功能</div>
+    <button class="btn btn-primary" onclick="showAllPersonsCollection()">查看所有人物合集</button>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="showTagsCollection()">查看所有已有标签</button>
+  </div>
+
+</div><!-- end panel -->
+</div><!-- end main -->
+
+<script>
+// ══════════════════════════════════════════════════
+//  主题 / 外观设置
+// ══════════════════════════════════════════════════
+// REL_COLORS 全局定义，供 draw() 和 renderAllRels() 使用，会被主题覆盖
+const REL_COLORS = { friend:'#a78bfa', family:'#34d399', rival:'#e94560', neutral:'#888888' };
+
+const DEFAULT_THEME = {
+  bgColor:      '#0e0e1a',
+  bgImage:      null,
+  bgOpacity:    1,
+  relColors: { friend:'#a78bfa', family:'#34d399', rival:'#e94560', neutral:'#888888' },
+  nodeTextColor: '#ffffff',
+  labelFollowRel: true,
+  labelTextColor: '#a78bfa',
+};
+let theme = JSON.parse(JSON.stringify(DEFAULT_THEME));
+let bgImageObj = null; // HTMLImageElement for canvas bg
+
+// 快速背景色预设
+const BG_PRESETS = [
+  {c:'#0e0e1a',n:'深夜'},{c:'#1a120b',n:'暖棕'},{c:'#0a1628',n:'深海'},
+  {c:'#0d1b0d',n:'暗林'},{c:'#1a0a0a',n:'暗红'},{c:'#f5f0e8',n:'羊皮纸'},
+  {c:'#e8f4f8',n:'浅云'},{c:'#1c1c1c',n:'纯黑'},
+];
+
+function toggleThemePanel() {
+  const p = document.getElementById('theme-panel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  if (p.style.display === 'block') {
+    syncThemePanelUI();
+    renderThemeCustomRelColors();
+  }
+}
+
+function syncThemePanelUI() {
+  document.getElementById('th-bg-color').value     = theme.bgColor;
+  document.getElementById('th-bg-opacity').value   = Math.round(theme.bgOpacity * 100);
+  document.getElementById('th-bg-opacity-val').textContent = Math.round(theme.bgOpacity * 100) + '%';
+  document.getElementById('th-col-friend').value   = theme.relColors.friend;
+  document.getElementById('th-col-family').value   = theme.relColors.family;
+  document.getElementById('th-col-rival').value    = theme.relColors.rival;
+  document.getElementById('th-col-neutral').value  = theme.relColors.neutral;
+  document.getElementById('th-node-text').value    = theme.nodeTextColor;
+  document.getElementById('th-label-follow-rel').checked = theme.labelFollowRel;
+  document.getElementById('th-label-text').value   = theme.labelTextColor;
+}
+
+function applyTheme() {
+  theme.bgColor       = document.getElementById('th-bg-color').value;
+  theme.bgOpacity     = document.getElementById('th-bg-opacity').value / 100;
+  theme.relColors.friend  = document.getElementById('th-col-friend').value;
+  theme.relColors.family  = document.getElementById('th-col-family').value;
+  theme.relColors.rival   = document.getElementById('th-col-rival').value;
+  theme.relColors.neutral = document.getElementById('th-col-neutral').value;
+  theme.nodeTextColor     = document.getElementById('th-node-text').value;
+  theme.labelFollowRel    = document.getElementById('th-label-follow-rel').checked;
+  theme.labelTextColor    = document.getElementById('th-label-text').value;
+  // 同步 REL_COLORS 供其他地方使用
+  Object.assign(REL_COLORS, theme.relColors);
+  // 同步外观面板自定义类型颜色列表
+  renderThemeCustomRelColors();
+}
+
+function clearBgImage() {
+  theme.bgImage = null;
+  bgImageObj    = null;
+  document.getElementById('th-bg-img-input').value = '';
+  pbStatus('背景图已清除');
+}
+
+function resetRelColor(type) {
+  const defaults = DEFAULT_THEME.relColors;
+  document.getElementById('th-col-' + type).value = defaults[type];
+  applyTheme();
+}
+
+function resetAllTheme() {
+  theme = JSON.parse(JSON.stringify(DEFAULT_THEME));
+  bgImageObj = null;
+  Object.assign(REL_COLORS, theme.relColors);
+  syncThemePanelUI();
+  pbStatus('外观已重置');
+}
+
+function saveThemeToStorage() {
+  const save = JSON.parse(JSON.stringify(theme));
+  save.bgImage = null; // 不保存大图base64（太大），只保存颜色
+  try { localStorage.setItem('rw_theme', JSON.stringify(save)); } catch(e){}
+  pbStatus('外观设置已保存 ✓');
+}
+
+function loadThemeFromStorage() {
+  try {
+    const s = localStorage.getItem('rw_theme');
+    if (s) {
+      const saved = JSON.parse(s);
+      theme = Object.assign(JSON.parse(JSON.stringify(DEFAULT_THEME)), saved);
+      if (!theme.relColors) theme.relColors = JSON.parse(JSON.stringify(DEFAULT_THEME.relColors));
+      Object.assign(REL_COLORS, theme.relColors);
+    }
+  } catch(e){}
+}
+
+// 初始化背景快速色板
+function initBgPresets() {
+  const wrap = document.getElementById('bg-presets');
+  if (!wrap) return;
+  BG_PRESETS.forEach(({c,n}) => {
+    const d = document.createElement('div');
+    d.title = n;
+    d.style.cssText = `width:24px;height:24px;border-radius:4px;background:${c};cursor:pointer;
+      border:2px solid #2a2a3e;transition:.15s;flex-shrink:0`;
+    d.onclick = () => {
+      document.getElementById('th-bg-color').value = c;
+      applyTheme();
+    };
+    d.onmouseover = () => d.style.borderColor = '#22d3ee';
+    d.onmouseout  = () => d.style.borderColor = '#2a2a3e';
+    wrap.appendChild(d);
+  });
+}
+
+// 背景图上传监听（在 DOMContentLoaded 后绑定）
+window.addEventListener('DOMContentLoaded', () => {
+  initBgPresets();
+  loadThemeFromStorage();
+  syncThemePanelUI();
+  const inp = document.getElementById('th-bg-img-input');
+  if (inp) {
+    inp.addEventListener('change', e => {
+      const f = e.target.files[0]; if (!f) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        theme.bgImage = ev.target.result;
+        const img = new Image();
+        img.onload = () => { bgImageObj = img; };
+        img.src = ev.target.result;
+        pbStatus('背景图已加载 ✓');
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+});
+
+// ══════════════════════════════════════════════════
+//  数据结构
+// ══════════════════════════════════════════════════
+let persons   = [];  // 见下方字段说明
+let relations = [];  // {id,a,b,label,type,note}
+let nextId    = 1;
+
+// ── 自定义关系类型 ──────────────────────────────────
+// 内置4种（key 固定）+ 用户扩展
+const BUILTIN_REL_TYPES = [
+  { key:'friend',  label:'友好', color:'#a78bfa', emoji:'🟣' },
+  { key:'family',  label:'亲属', color:'#34d399', emoji:'🟢' },
+  { key:'rival',   label:'对立', color:'#e94560', emoji:'🔴' },
+  { key:'neutral', label:'中性', color:'#888888', emoji:'⚪' },
+];
+let customRelTypes = []; // { key:'custom_xxx', label:'', color:'#...' }
+
+// 加载自定义类型
+try {
+  const saved = localStorage.getItem('rw_custom_rel_types');
+  if (saved) customRelTypes = JSON.parse(saved);
+} catch(e){}
+
+function saveCustomRelTypes() {
+  try { localStorage.setItem('rw_custom_rel_types', JSON.stringify(customRelTypes)); } catch(e){}
+}
+
+/** 所有类型（内置 + 自定义），优先自定义色覆盖内置 */
+function getAllRelTypes() {
+  const builtinWithTheme = BUILTIN_REL_TYPES.map(t => ({
+    ...t,
+    color: (theme.relColors && theme.relColors[t.key]) || t.color
+  }));
+  return [...builtinWithTheme, ...customRelTypes];
+}
+
+/** 根据 type key 取颜色 */
+function getRelColor(typeKey) {
+  // 先查主题内置
+  if (theme.relColors && theme.relColors[typeKey]) return theme.relColors[typeKey];
+  // 再查自定义
+  const ct = customRelTypes.find(t => t.key === typeKey);
+  if (ct) return ct.color;
+  // fallback
+  return REL_COLORS[typeKey] || '#888';
+}
+
+/** 刷新关系类型下拉框 */
+function refreshRelTypeSelect() {
+  const sel = document.getElementById('r-type');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  getAllRelTypes().forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.key;
+    o.textContent = (t.emoji || '●') + ' ' + t.label;
+    if (t.key === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+/** 渲染自定义类型列表（关系Tab内） */
+function renderCustomRelTypeList() {
+  const el = document.getElementById('custom-rel-type-list');
+  if (!el) return;
+  if (!customRelTypes.length) {
+    el.innerHTML = '<span style="color:#555;font-size:.72rem">暂无自定义类型</span>';
+    return;
+  }
+  el.innerHTML = customRelTypes.map((t,i) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #1e1e2e">
+      <span style="width:14px;height:14px;border-radius:50%;background:${t.color};flex-shrink:0;display:inline-block"></span>
+      <span style="flex:1;font-size:.8rem;color:#ddd">${t.label}</span>
+      <input type="color" value="${t.color}" title="修改颜色"
+        style="width:26px;height:22px;border:none;border-radius:3px;cursor:pointer;padding:0;background:none"
+        onchange="updateCustomRelColor(${i}, this.value)">
+      <button onclick="deleteCustomRelType(${i})"
+        style="background:none;border:none;color:#555;cursor:pointer;font-size:.8rem;padding:2px 4px;border-radius:3px"
+        onmouseover="this.style.color='#e94560'" onmouseout="this.style.color='#555'">✕</button>
+    </div>`).join('');
+}
+
+/** 渲染外观面板自定义类型颜色区 */
+function renderThemeCustomRelColors() {
+  const el = document.getElementById('th-custom-rel-colors');
+  if (!el) return;
+  if (!customRelTypes.length) {
+    el.innerHTML = '<span style="color:#555;font-size:.72rem">（暂无自定义类型，请在「🔗 关系」Tab添加）</span>';
+    return;
+  }
+  el.innerHTML = customRelTypes.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:.72rem;color:#888;flex:1">${t.label}</span>
+      <input type="color" value="${t.color}"
+        style="width:32px;height:24px;border:none;border-radius:4px;cursor:pointer;padding:0"
+        onchange="updateCustomRelColor(${i}, this.value)">
+      <span style="width:14px;height:14px;border-radius:50%;background:${t.color};display:inline-block;flex-shrink:0"></span>
+    </div>`).join('');
+}
+
+function addCustomRelType() {
+  const nameEl = document.getElementById('crt-name');
+  const colorEl = document.getElementById('crt-color');
+  const name = nameEl.value.trim();
+  if (!name) { alert('请输入类型名称'); return; }
+  if (getAllRelTypes().find(t => t.label === name)) { alert('该名称已存在'); return; }
+  const key = 'custom_' + Date.now();
+  customRelTypes.push({ key, label: name, color: colorEl.value, emoji: '🔷' });
+  saveCustomRelTypes();
+  nameEl.value = '';
+  colorEl.value = '#f59e0b';
+  refreshRelTypeSelect();
+  renderCustomRelTypeList();
+  renderThemeCustomRelColors();
+  pbStatus('已添加关系类型：' + name);
+}
+
+function updateCustomRelColor(index, color) {
+  if (customRelTypes[index]) {
+    customRelTypes[index].color = color;
+    saveCustomRelTypes();
+    renderCustomRelTypeList();
+    renderThemeCustomRelColors();
+  }
+}
+
+function deleteCustomRelType(index) {
+  const t = customRelTypes[index];
+  if (!t) return;
+  // 检查是否有关系正在使用
+  const inUse = relations.some(r => r.type === t.key);
+  if (inUse && !confirm(`有关系正在使用「${t.label}」类型，删除后这些关系将显示为灰色，确定吗？`)) return;
+  customRelTypes.splice(index, 1);
+  saveCustomRelTypes();
+  refreshRelTypeSelect();
+  renderCustomRelTypeList();
+  renderThemeCustomRelColors();
+  pbStatus('已删除关系类型：' + t.label);
+}
+let selectedId = null;
+
+// 故事与搜索数据结构
+let storyCollections = [ { id: 'default', name: '默认合集', cover: null } ];
+let stories = [];
+let activeFilterKw = '';
+let activeFilterPersonId = null;
+
+// 密码与加密控制
+let sessionUnlocked = false;
+function getGlobalPassword() { return localStorage.getItem('app_password') || ''; }
+function setGlobalPassword() {
+  const current = getGlobalPassword();
+  if (current) {
+    const input = prompt('请输入当前密码以验证：');
+    if (input !== current) return alert('密码错误！');
+  }
+  const newPwd = prompt('请输入新全局密码（留空则清除密码）：');
+  if (newPwd !== null) {
+      localStorage.setItem('app_password', newPwd.trim());
+      alert(newPwd.trim() ? '全局密码设置成功！' : '密码已清除！');
+      if (!newPwd.trim()) sessionUnlocked = true;
+      else sessionUnlocked = false;
+      renderList();
+      try { renderStoriesList(); } catch(e) {}
+  }
+}
+function verifyPassword() {
+  const pwd = getGlobalPassword();
+  if (!pwd) return true;
+  if (sessionUnlocked) return true;
+  const input = prompt('此内容已加密，请输入全局密码解锁：');
+  if (input === pwd) {
+    sessionUnlocked = true;
+    pbStatus('已解锁当前会话');
+    return true;
+  } else {
+    if (input !== null) alert('密码错误！');
+    return false;
+  }
+}
+function unlockSessionAndRender() {
+    if (verifyPassword()) {
+        try { renderStoriesList(); renderList(); } catch(e){}
+    }
+}
+
+// ========================
+//    功能: 故事合集与合集管理
+// ========================
+
+let pendingStoryCover = null;
+let pendingCollectionCover = null;
+
+document.getElementById('s-cover').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ev => { pendingStoryCover = ev.target.result; };
+  r.readAsDataURL(f);
+});
+
+document.getElementById('sc-cover').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ev => { pendingCollectionCover = ev.target.result; };
+  r.readAsDataURL(f);
+});
+
+function addCollection() {
+    const name = document.getElementById('sc-name').value.trim();
+    if(!name) return alert('请输入合集名称');
+    if(storyCollections.find(c => c.name === name)) return alert('合集名称重复');
+    storyCollections.push({
+        id: 'col_' + Date.now(),
+        name: name,
+        cover: pendingCollectionCover,
+        isEncrypted: false
+    });
+    document.getElementById('sc-name').value = '';
+    document.getElementById('sc-cover').value = '';
+    pendingCollectionCover = null;
+    refreshCollectionSelect();
+    renderStoriesList();
+}
+
+function refreshCollectionSelect() {
+    const sel = document.getElementById('s-collection');
+    if(!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '';
+    storyCollections.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.name;
+        if(c.id === prev) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+window.addEventListener('DOMContentLoaded', refreshCollectionSelect);
+
+function saveStory() {
+  const editIdStr = document.getElementById('s-id').value;
+  const isEdit = !!editIdStr;
+  
+  const title = document.getElementById('s-title').value.trim();
+  const content = document.getElementById('s-content').value.trim();
+  const tagsStr = document.getElementById('s-tags').value.trim();
+  const collectionId = document.getElementById('s-collection').value || 'default';
+  
+  if(!title || !content) return alert('标题和内容不可为空！');
+  
+  const selOpts = Array.from(document.getElementById('s-persons').selectedOptions);
+  const pIds = selOpts.map(o => parseInt(o.value));
+  let tags = tagsStr ? tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean) : [];
+  
+  if (isEdit) {
+      let stId = Number(editIdStr);
+      let s = stories.find(x => x.id === stId);
+      if(!s) return alert('未找到该故事');
+      if(s.isLocked) return alert('该故事已被锁定，无法修改！');
+      s.title = title;
+      s.content = content;
+      s.tags = tags;
+      s.persons = pIds;
+      s.collectionId = collectionId;
+      if (document.getElementById('s-cover').value) {
+          s.cover = pendingStoryCover;
+      }
+  } else {
+      stories.push({
+        id: Date.now(),
+        title, content, tags, persons: pIds,
+        collectionId,
+        cover: pendingStoryCover,
+        isLocked: false
+      });
+  }
+  
+  cancelStoryEdit();
+  renderStoriesList();
+}
+
+function editStory(id) {
+    let s = stories.find(x => x.id === id);
+    if(!s) return;
+    if(s.isLocked) return alert('该故事已被锁定，请先解锁！');
+    if(s.isEncrypted && !verifyPassword()) return;
+    
+    document.getElementById('editing-mode-text').textContent = '编辑模式 - ' + s.title;
+    document.getElementById('s-id').value = s.id;
+    document.getElementById('s-title').value = s.title;
+    document.getElementById('s-content').value = s.content;
+    document.getElementById('s-tags').value = s.tags?s.tags.join(', '):'';
+    document.getElementById('s-collection').value = s.collectionId || 'default';
+    
+    const pSel = document.getElementById('s-persons');
+    Array.from(pSel.options).forEach(opt => {
+        opt.selected = (s.persons||[]).includes(Number(opt.value));
+    });
+    
+    document.getElementById('s-cover').value = '';
+    pendingStoryCover = s.cover || null;
+    
+    document.getElementById('s-cancel-btn').style.display = 'inline-block';
+    
+    switchTab('story');
+}
+
+function toggleCollectionEncrypt(id) {
+    let c = storyCollections.find(x => x.id === id);
+    if(c) {
+        if (c.id === 'default') return alert('默认合集不可加密');
+        if (c.isEncrypted) {
+            if (!verifyPassword()) return;
+            c.isEncrypted = false;
+        } else {
+            const pwd = getGlobalPassword();
+            if (!pwd) return alert('请先设置全局密码！');
+            c.isEncrypted = true;
+        }
+        renderStoriesList();
+    }
+}
+
+function toggleStoryEncrypt(id) {
+    let s = stories.find(x => x.id === id);
+    if(s) {
+        if (s.isEncrypted) {
+            if (!verifyPassword()) return;
+            s.isEncrypted = false;
+        } else {
+            const pwd = getGlobalPassword();
+            if (!pwd) return alert('请先设置全局密码！');
+            s.isEncrypted = true;
+        }
+        renderStoriesList();
+    }
+}
+
+function cancelStoryEdit() {
+  document.getElementById('editing-mode-text').textContent = '新建模式';
+  document.getElementById('s-id').value = '';
+  document.getElementById('s-title').value = '';
+  document.getElementById('s-content').value = '';
+  document.getElementById('s-tags').value = '';
+  document.getElementById('s-collection').value = 'default';
+  document.getElementById('s-cover').value = '';
+  pendingStoryCover = null;
+  const pSel = document.getElementById('s-persons');
+  if(pSel) Array.from(pSel.options).forEach(opt => opt.selected = false);
+  document.getElementById('s-cancel-btn').style.display = 'none';
+}
+
+function toggleStoryLock(id) {
+    let s = stories.find(x => x.id === id);
+    if(s) {
+        s.isLocked = !s.isLocked;
+        renderStoriesList();
+    }
+}
+
+function renderStoriesList() {
+  refreshCollectionSelect(); 
+  const list = document.getElementById('story-list');
+  document.getElementById('story-count').textContent = stories.length;
+  if(stories.length === 0) { list.innerHTML = '<div style="color:#555;font-size:0.8rem">暂无故事</div>'; return; }
+  
+  let htmlResult = '';
+  storyCollections.forEach(col => {
+      let colStories = stories.filter(s => (s.collectionId || 'default') === col.id);
+      if (colStories.length === 0 && col.id !== 'default') return; 
+      
+      let encryptBtnHtml = (col.id !== 'default') ? `<button class="btn btn-sm btn-secondary" style="margin-left:auto; padding:2px 8px; font-size:0.75rem;" onclick="toggleCollectionEncrypt('${col.id}')">${col.isEncrypted?'🔓 解除合集加密':'🔒 加密合集'}</button>` : '';
+
+      if (col.isEncrypted && !sessionUnlocked) {
+          htmlResult += '<div style="margin-top:20px; border-bottom:1px solid #3d2e6e; padding-bottom:6px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">' +
+              '<span style="font-size:1.1rem; color:#c4b5fd; font-weight:bold;">📁 🔒 [加密合集]</span>' + encryptBtnHtml + '</div>' +
+              '<div style="color:#888; font-size:0.8rem; margin-left:10px;"><button class="btn btn-sm btn-secondary" onclick="unlockSessionAndRender()">🔑 验证密码解锁</button></div>';
+          return;
+      }
+
+      let colHeader = '<div style="margin-top:20px; border-bottom:1px solid #3d2e6e; padding-bottom:6px; margin-bottom:10px; display:flex; align-items:center; gap:10px;">';
+      if (col.cover) {
+          colHeader += '<img src="' + col.cover + '" style="width:30px; height:30px; border-radius:4px; object-fit:cover;">';
+      }
+      colHeader += '<span style="font-size:1.1rem; color:#c4b5fd; font-weight:bold;">📁 ' + col.name + ' ('+colStories.length+')' + (col.isEncrypted?' 🔒':'') + '</span>' + encryptBtnHtml + '</div>';
+      
+      let itemsStr = '';
+      if(colStories.length === 0) {
+          itemsStr = '<div style="color:#555;font-size:0.8rem; margin-left:10px;">暂无故事</div>';
+      } else {
+          itemsStr = colStories.map(s => {
+            if (s.isEncrypted && !sessionUnlocked) {
+                 return '<div style="background:#1e1e32; padding:12px; margin-bottom:10px; border-radius:6px; border: 1px solid #444; position:relative;">' +
+                   '<h3 style="color:#a78bfa; margin-top:0; margin-bottom:6px; font-size:1rem;">🔒 [加密故事] ' + s.title + '</h3>' +
+                   '<p style="color:#888; font-size:0.8rem">内容已加密，点击下方验证密码解锁</p>' +
+                   '<div style="margin-top:10px; display:flex; gap:8px;">' +
+                       '<button class="btn btn-sm btn-secondary" onclick="unlockSessionAndRender()">🔑 验证密码</button>' +
+                   '</div></div>';
+            }
+            let ht = s.content;
+            try { if(typeof marked !== 'undefined') ht = marked.parse(s.content); } catch(e){}
+            
+            let pNames = '';
+            if (s.persons && s.persons.length) {
+                pNames = s.persons.map(pid => {
+                    let per = persons.find(x => x.id === pid);
+                    return per ? per.name : '';
+                }).filter(Boolean).join(', ');
+            }
+            
+            let coverHtml = s.cover ? '<div style="float:right; margin-left:10px;"><img src="' + s.cover + '" style="width:80px; height:80px; border-radius:6px; object-fit:cover;"></div>' : '';
+            
+            return '<div style="background:#1e1e32; padding:12px; margin-bottom:10px; border-radius:6px; border: 1px solid '+(s.isLocked?'#444':'#2a2a3e')+'; position:relative;">' +
+              coverHtml +
+              '<h3 style="color:#a78bfa; margin-top:0; margin-bottom:6px; font-size:1rem;">' + (s.isLocked?'🔒 ':'') + s.title + '</h3>' +
+              ((s.tags && s.tags.length) ? '<div style="font-size:0.75rem; color:#888; margin-bottom:4px;">🏷️ 标签: ' + s.tags.join(', ') + '</div>' : '') +
+              (pNames ? '<div style="font-size:0.75rem; color:#888; margin-bottom:10px;">👥 涉及人物: ' + pNames + '</div>' : '') +
+              '<div style="font-size:0.85rem; color:#ccc; line-height:1.6; padding-top:6px; border-top:1px solid #333; clear:both;">' + ht + '</div>' + 
+              '<div style="margin-top:10px; display:flex; gap:8px;">' + 
+                  (!s.isLocked ? '<button class="btn btn-sm btn-secondary" onclick="editStory(' + s.id + ')">编辑</button>' : '') +
+                  '<button class="btn btn-sm btn-secondary" onclick="toggleStoryLock(' + s.id + ')">' + (s.isLocked ? '解锁' : '锁定') + '</button>' +
+                  '<button class="btn btn-sm btn-secondary" onclick="toggleStoryEncrypt(' + s.id + ')">' + (s.isEncrypted ? '🔓 解密' : '🔒 加密') + '</button>' +
+                  (!s.isLocked ? '<button class="btn btn-sm btn-danger" onclick="deleteStory(' + s.id + ')">删除</button>' : '') +
+              '</div>' +
+            '</div>';
+          }).join('');
+      }
+      
+      htmlResult += colHeader + itemsStr;
+  });
+  
+  list.innerHTML = htmlResult;
+}
+
+function deleteStory(id) {
+    let s = stories.find(x => x.id === id);
+    if(s && s.isEncrypted && !verifyPassword()) return;
+    if(!confirm('确定删除此故事吗？')) return;
+    stories = stories.filter(s => s.id !== id);
+    renderStoriesList();
+}
+
+// ========================
+//    功能: 搜索与合集
+// ========================
+function applyFilters() {
+  activeFilterKw = document.getElementById('filter-kw').value.trim().toLowerCase();
+  const fperson = document.getElementById('filter-person').value;
+  activeFilterPersonId = fperson ? parseInt(fperson) : null;
+  renderList();
+}
+function clearFilters() {
+  document.getElementById('filter-kw').value = '';
+  document.getElementById('filter-person').value = '';
+  activeFilterKw = '';
+  activeFilterPersonId = null;
+  renderList();
+}
+
+function showAllPersonsCollection() {
+  switchTab('detail');
+  document.getElementById('detail-empty').style.display = 'none';
+  const card = document.getElementById('detail-card');
+  card.style.display = 'block';
+  card.innerHTML = '<div class="section-title" style="font-size:1rem">👥 所有人物合集</div>' +
+    '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:15px;">' +
+      persons.map(p => {
+          let tstr = (p.tags && p.tags.length) ? p.tags.join(', ') : '无标签';
+          return '<div style="background:#1e1e32; border:1px solid #3d2e6e; padding:8px 12px; border-radius:8px;">' +
+                 '<div style="font-weight:bold; color:#fff;">' + p.name + '</div>' +
+                 '<div style="font-size:0.7rem; color:#a78bfa; margin-top:4px;">🏷️ ' + tstr + '</div>' +
+                 '</div>';
+      }).join('') +
+    '</div>';
+}
+
+function showTagsCollection() {
+  switchTab('detail');
+  document.getElementById('detail-empty').style.display = 'none';
+  const card = document.getElementById('detail-card');
+  card.style.display = 'block';
+  
+  // 收集所有人物标签
+  const tagCountRes = {};
+  persons.forEach(p => {
+      if(p.tags) p.tags.forEach(t => {
+          tagCountRes[t] = (tagCountRes[t]||0) + 1;
+      });
+  });
+  
+  let htmlstr = '<div class="section-title" style="font-size:1rem">🏷️ 所有标签合集</div><div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:15px;">';
+  const keys = Object.keys(tagCountRes);
+  if(keys.length === 0) htmlstr += '<span style="color:#888">暂无标签数据</span>';
+  else {
+      keys.forEach(k => {
+          htmlstr += "<span class='rel-tag' onclick=\"document.getElementById('filter-kw').value='"+k+"'; switchTab('search'); applyFilters();\">" + k + " (" + tagCountRes[k] + ")</span>";
+      });
+  }
+  htmlstr += '</div>';
+  card.innerHTML = htmlstr;
+}
+
+const COLORS = ['#a78bfa','#f472b6','#34d399','#60a5fa','#fb923c','#facc15','#e94560','#22d3ee'];
+let pickedColor = COLORS[0];
+let pendingAvatar = null; // base64 dataURL
+
+// ══════════════════════════════════════════════════
+//  颜色选择器初始化
+// ══════════════════════════════════════════════════
+(function initColorPicker() {
+  const cp = document.getElementById('color-picker');
+  COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-dot' + (c === pickedColor ? ' picked' : '');
+    d.style.background = c;
+    d.onclick = () => {
+      pickedColor = c;
+      document.querySelectorAll('.color-dot').forEach(x => x.classList.remove('picked'));
+      d.classList.add('picked');
+    };
+    cp.appendChild(d);
+  });
+})();
+
+// ══════════════════════════════════════════════════
+//  头像上传
+// ══════════════════════════════════════════════════
+document.getElementById('f-avatar-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingAvatar = ev.target.result;
+    const prev = document.getElementById('f-avatar-preview');
+    prev.innerHTML = `<img src="${pendingAvatar}" alt="头像">`;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+function clearAvatar() {
+  pendingAvatar = null;
+  const prev = document.getElementById('f-avatar-preview');
+  prev.innerHTML = '<span id="f-avatar-hint">点击<br>上传</span>';
+}
+
+function loadAvatarImage(person) {
+  if (person.avatar) {
+    const img = new Image();
+    img.onload = () => { person._img = img; };
+    img.src = person.avatar;
+  } else {
+    person._img = null;
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  添加人物
+// ══════════════════════════════════════════════════
+function addPerson() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('请输入姓名'); return; }
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const angle = Math.random() * Math.PI * 2, r = 80 + Math.random() * 140;
+  const p = {
+    id: nextId++,
+    name,
+    alias:       document.getElementById('f-alias').value.trim(),
+    faction:     document.getElementById('f-faction').value.trim(),
+    role:        document.getElementById('f-role').value.trim(),
+    tags:        (document.getElementById('f-tags') ? document.getElementById('f-tags').value.trim().split(/[,，]/).map(t=>t.trim()).filter(Boolean) : []),
+    gender:      document.getElementById('f-gender').value,
+    age:         document.getElementById('f-age').value.trim(),
+    birthday:    document.getElementById('f-birthday').value.trim(),
+    height:      document.getElementById('f-height').value.trim(),
+    appearance:  document.getElementById('f-appearance').value.trim(),
+    personality: document.getElementById('f-personality').value.trim(),
+    background:  document.getElementById('f-background').value.trim(),
+    skills:      document.getElementById('f-skills').value.trim(),
+    goal:        document.getElementById('f-goal').value.trim(),
+    motto:       document.getElementById('f-motto').value.trim(),
+    desc:        document.getElementById('f-desc').value.trim(),
+    color:       pickedColor,
+    avatar:      pendingAvatar,
+    isEncrypted: document.getElementById('f-encrypted') ? document.getElementById('f-encrypted').checked : false,
+    _img:        null,
+    x: cx + Math.cos(angle) * r,
+    y: cy + Math.sin(angle) * r,
+    vx: 0, vy: 0
+  };
+  loadAvatarImage(p);
+  persons.push(p);
+
+  // 清空表单
+  ['f-name','f-alias','f-faction','f-role','f-age','f-birthday','f-height',
+   'f-appearance','f-personality','f-background','f-skills','f-goal','f-motto','f-desc']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-gender').value = '';
+  if (document.getElementById('f-encrypted')) document.getElementById('f-encrypted').checked = false;
+  clearAvatar();
+  refreshSelects(); renderList(); renderAllRels();
+}
+
+// ══════════════════════════════════════════════════
+//  关系操作
+// ══════════════════════════════════════════════════
+function addRelation() {
+  const a = +document.getElementById('r-a').value;
+  const b = +document.getElementById('r-b').value;
+  const label = document.getElementById('r-label').value.trim();
+  const type  = document.getElementById('r-type').value;
+  const note  = document.getElementById('r-note').value.trim();
+  if (!a || !b) { alert('请选择两个人物'); return; }
+  if (a === b)  { alert('不能与自己建立关系'); return; }
+  if (relations.find(r => (r.a===a&&r.b===b)||(r.a===b&&r.b===a))) {
+    if (!confirm('这两人已有关系，是否覆盖？')) return;
+    relations = relations.filter(r => !((r.a===a&&r.b===b)||(r.a===b&&r.b===a)));
+  }
+  relations.push({ id: nextId++, a, b, label: label||'相关', type, note });
+  document.getElementById('r-label').value = '';
+  document.getElementById('r-note').value  = '';
+  renderAllRels();
+  if (selectedId) showDetail(selectedId);
+}
+
+function deleteRelation(rid) {
+  relations = relations.filter(r => r.id !== rid);
+  renderAllRels();
+  if (selectedId) showDetail(selectedId);
+}
+
+function deletePerson(id) {
+  if (!id) return;
+  const p = persons.find(x => x.id === id);
+  if (p && p.isEncrypted && !verifyPassword()) return;
+  if (!confirm('确定删除此人物及其所有关系？')) return;
+  persons   = persons.filter(p => p.id !== id);
+  relations = relations.filter(r => r.a !== id && r.b !== id);
+  if (selectedId === id) {
+    selectedId = null;
+    document.getElementById('detail-card').style.display  = 'none';
+    document.getElementById('detail-empty').style.display = 'block';
+  }
+  refreshSelects(); renderList(); renderAllRels();
+}
+
+// ══════════════════════════════════════════════════
+//  渲染辅助
+// ══════════════════════════════════════════════════
+function refreshSelects() {
+  ['r-a','r-b','s-persons','filter-person'].forEach(sid => {
+    const sel = document.getElementById(sid);
+    if (!sel) return;
+    const prev = +sel.value;
+    sel.innerHTML = '<option value="">-- 选择人物 --</option>';
+    persons.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      if (p.id === prev) o.selected = true;
+      sel.appendChild(o);
+    });
+  });
+}
+
+function renderList() {
+  const el = document.getElementById('person-list');
+  el.innerHTML = '';
+  document.getElementById('person-count').textContent = persons.length;
+  persons.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'person-item' + (p.id === selectedId ? ' selected' : '');
+    const avatarHtml = p.avatar
+      ? `<div class="p-avatar"><img src="${p.avatar}" alt="${p.name}"></div>`
+      : `<div class="p-avatar" style="background:${p.color}">${p.name[0]}</div>`;
+    div.innerHTML = `${avatarHtml}
+      <div style="min-width:0">
+        <div class="person-name">${p.isEncrypted ? '🔒 ' : ''}${p.name}${p.alias?' <span style="color:#777;font-size:.7rem">（${p.alias}）</span>':''}</div>
+        <div class="person-role">${p.role||p.faction||'—'}</div>
+      </div>
+      <button class="btn-del" title="删除" onclick="event.stopPropagation();deletePerson(${p.id})">✕</button>`;
+    div.onclick = () => { selectedId = p.id; showDetail(p.id); renderList(); switchTab('detail'); };
+    el.appendChild(div);
+  });
+}
+
+function renderAllRels() {
+  const el = document.getElementById('all-rels-list');
+  document.getElementById('rel-count').textContent = relations.length;
+  if (!relations.length) { el.innerHTML = '<span style="color:#555;font-size:.8rem">暂无关系</span>'; return; }
+  el.innerHTML = relations.map(r => {
+    const pa = persons.find(p=>p.id===r.a), pb = persons.find(p=>p.id===r.b);
+    if (!pa||!pb) return '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px solid #1a1a2e;font-size:.8rem">
+      <span style="color:#ddd">${pa.name}</span>
+      <span style="color:${getRelColor(r.type)};font-size:.75rem">—${r.label}→</span>
+      <span style="color:#ddd">${pb.name}</span>
+      <button onclick="deleteRelation(${r.id})" style="margin-left:auto;background:none;border:none;color:#555;cursor:pointer;font-size:.8rem;padding:1px 4px;border-radius:3px" onmouseover="this.style.color='#e94560'" onmouseout="this.style.color='#555'">✕</button>
+    </div>`;
+  }).join('');
+}
+
+const REL_LABELS = { friend:'友好', family:'亲属', rival:'对立', neutral:'中性' };
+
+function togglePersonEncryption(id) {
+    const p = persons.find(x => x.id === id);
+    if (!p) return;
+    if (p.isEncrypted) {
+        if (!verifyPassword()) return;
+        p.isEncrypted = false;
+        pbStatus('人物已解除加密');
+    } else {
+        const pwd = getGlobalPassword();
+        if (!pwd) return alert('请先设置全局密码！');
+        p.isEncrypted = true;
+        pbStatus('人物已加密');
+    }
+    showDetail(id);
+    renderList();
+}
+
+function showDetail(id) {
+  const p = persons.find(x => x.id === id);
+  if (!p) return;
+  if (p.isEncrypted && !verifyPassword()) {
+      selectedId = null;
+      document.getElementById('detail-card').style.display  = 'none';
+      document.getElementById('detail-empty').style.display = 'block';
+      renderList();
+      return;
+  }
+  selectedId = id;
+  document.getElementById('detail-empty').style.display = 'none';
+  document.getElementById('detail-card').style.display  = 'block';
+
+  // 头像
+  const avEl = document.getElementById('d-av');
+  avEl.style.background = p.color;
+  avEl.innerHTML = p.avatar ? `<img src="${p.avatar}" alt="${p.name}">` : p.name[0];
+
+  // 名字
+  document.getElementById('d-name').textContent = p.name + (p.alias ? `（${p.alias}）` : '');
+  document.getElementById('d-sub').textContent  = [p.faction, p.role].filter(Boolean).join(' · ') || '—';
+
+  // 基础信息表格
+  const rows = [
+    ['性别', p.gender], ['年龄', p.age], ['生日', p.birthday], ['身高', p.height],
+  ].filter(([,v]) => v);
+  document.getElementById('d-table').innerHTML = rows.map(([k,v]) =>
+    `<tr><td>${k}</td><td>${v}</td></tr>`
+  ).join('');
+
+  // 块状信息
+  const blocks = [
+    ['外貌特征', p.appearance], ['性格特点', p.personality],
+    ['出身背景', p.background], ['技能特长', p.skills],
+    ['人生目标', p.goal],       ['座右铭',   p.motto],
+    ['综合简介', p.desc],
+  ].filter(([,v]) => v);
+  document.getElementById('d-blocks').innerHTML = blocks.map(([k,v]) =>
+    `<div style="margin-top:8px;font-size:.73rem;color:#666;margin-bottom:2px">${k}</div>
+     <div class="detail-block">${v.replace(/\n/g,'<br>')}</div>`
+  ).join('');
+
+  const encryptBtn = document.getElementById('d-btn-encrypt');
+  if (encryptBtn) encryptBtn.textContent = p.isEncrypted ? '🔓 解除人物加密' : '🔒 加密此人物';
+
+  // 关系
+  const myRels = relations.filter(r => r.a === id || r.b === id);
+  document.getElementById('d-rels').innerHTML = myRels.length
+    ? myRels.map(r => {
+        const oid = r.a === id ? r.b : r.a;
+        const other = persons.find(x => x.id === oid);
+        if (!other) return '';
+        return `<span class="rel-tag" onclick="deleteRelation(${r.id})" title="点击删除">
+          <span class="rel-dot" style="background:${getRelColor(r.type)}"></span>
+          ${r.label} → ${other.name} ✕
+        </span>`;
+      }).join('')
+    : '<span style="color:#555;font-size:.8rem">暂无关系</span>';
+}
+
+// ══════════════════════════════════════════════════
+//  标签页切换
+// ══════════════════════════════════════════════════
+function switchTab(name) {
+  if (name === 'story') { renderStoriesList(); }
+  if (name === 'rel') { refreshRelTypeSelect(); renderCustomRelTypeList(); }
+  document.querySelectorAll('.ptab').forEach((t,i) => {
+    const names = ['add','rel','detail','story','search'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════
+//  Canvas & 力导向
+// ══════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+let W, H, DPR = window.devicePixelRatio || 1;
+
+function resize() {
+  const wrap = document.getElementById('canvas-wrap');
+  W = wrap.clientWidth;
+  H = wrap.clientHeight;
+  // 高清屏适配：物理像素 = 逻辑像素 × DPR
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const NODE_R = 28;
+
+function tick() {
+  for (let i = 0; i < persons.length; i++) {
+    for (let j = i+1; j < persons.length; j++) {
+      const a = persons[i], b = persons[j];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const dist = Math.sqrt(dx*dx+dy*dy)||1;
+      const force = 7000/(dist*dist);
+      const fx = dx/dist*force, fy = dy/dist*force;
+      a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
+    }
+  }
+  relations.forEach(r => {
+    const a = persons.find(p=>p.id===r.a), b = persons.find(p=>p.id===r.b);
+    if (!a||!b) return;
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const dist = Math.sqrt(dx*dx+dy*dy)||1;
+    const force = (dist-190)*0.028;
+    a.vx += dx/dist*force; a.vy += dy/dist*force;
+    b.vx -= dx/dist*force; b.vy -= dy/dist*force;
+  });
+  persons.forEach(p => {
+    p.vx += (W/2-p.x)*0.002; p.vy += (H/2-p.y)*0.002;
+  });
+  persons.forEach(p => {
+    if (dragging && dragging.id===p.id) return;
+    p.vx *= 0.85; p.vy *= 0.85;
+    p.x  += p.vx;  p.y  += p.vy;
+    p.x = Math.max(NODE_R, Math.min(W-NODE_R, p.x));
+    p.y = Math.max(NODE_R, Math.min(H-NODE_R, p.y));
+  });
+}
+
+function draw() {
+  ctx.clearRect(0,0,W,H);
+
+  // ── 背景 ──
+  if (bgImageObj) {
+    // 先填纯色
+    ctx.fillStyle = theme.bgColor;
+    ctx.fillRect(0, 0, W, H);
+    // 再叠图
+    ctx.save();
+    ctx.globalAlpha = theme.bgOpacity;
+    // 保持比例铺满
+    const iw = bgImageObj.naturalWidth, ih = bgImageObj.naturalHeight;
+    const scale = Math.max(W/iw, H/ih);
+    const dw = iw*scale, dh = ih*scale;
+    ctx.drawImage(bgImageObj, (W-dw)/2, (H-dh)/2, dw, dh);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = theme.bgColor;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── 绘制边（关系线）──
+  relations.forEach(r => {
+    const a = persons.find(p=>p.id===r.a), b = persons.find(p=>p.id===r.b);
+    if (!a||!b) return;
+
+    // 筛选器：只显示相关节点
+    if (activeFilterPersonId) {
+      if (a.id !== activeFilterPersonId && b.id !== activeFilterPersonId) return;
+    }
+
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const dist = Math.sqrt(dx*dx+dy*dy)||1;
+    const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+    const col = getRelColor(r.type);
+    const nx = dx/dist, ny = dy/dist;
+
+    // 连线（带阴影增强可见性）
+    ctx.save();
+    ctx.shadowColor = col + '55';
+    ctx.shadowBlur  = 6;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = col + 'cc';
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // 箭头
+    const headLen = 12;
+    const ex = b.x - nx*(NODE_R+3), ey = b.y - ny*(NODE_R+3);
+    ctx.save();
+    ctx.shadowColor = col + '88';
+    ctx.shadowBlur  = 4;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - headLen*(nx - ny*0.45), ey - headLen*(ny + nx*0.45));
+    ctx.lineTo(ex - headLen*(nx + ny*0.45), ey - headLen*(ny - nx*0.45));
+    ctx.closePath();
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.restore();
+
+    // 关系标签（楷体，描边增强可读性）
+    const labelCol = theme.labelFollowRel ? col : (theme.labelTextColor || col);
+    ctx.save();
+    ctx.translate(mx, my);
+    const ang = Math.atan2(dy, dx);
+    ctx.rotate((ang > Math.PI/2 || ang < -Math.PI/2) ? ang + Math.PI : ang);
+    ctx.font         = 'bold 13px KaiTi, 楷体, STKaiti, serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.strokeStyle  = theme.bgColor || '#0e0e1a';
+    ctx.lineWidth    = 3;
+    ctx.lineJoin     = 'round';
+    ctx.strokeText(r.label, 0, -5);
+    ctx.fillStyle    = labelCol;
+    ctx.fillText(r.label, 0, -5);
+    ctx.restore();
+  });
+
+  // ── 绘制节点 ──
+  persons.forEach(p => {
+    // 筛选器：非相关节点半透明
+    const isFiltered = activeFilterPersonId && p.id !== activeFilterPersonId &&
+      !relations.some(r => (r.a===activeFilterPersonId&&r.b===p.id)||(r.b===activeFilterPersonId&&r.a===p.id));
+    const alpha = isFiltered ? 0.18 : 1;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    const sel = p.id === selectedId;
+
+    // 选中光晕
+    if (sel) {
+      const g = ctx.createRadialGradient(p.x, p.y, NODE_R*0.5, p.x, p.y, NODE_R+26);
+      g.addColorStop(0, p.color + '55');
+      g.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, NODE_R+26, 0, Math.PI*2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+
+    // 节点底色（带阴影）
+    ctx.shadowColor = p.color + (sel ? 'cc' : '66');
+    ctx.shadowBlur  = sel ? 18 : 10;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, NODE_R, 0, Math.PI*2);
+    // 径向渐变填充，让球体有立体感
+    const grad = ctx.createRadialGradient(p.x - NODE_R*0.3, p.y - NODE_R*0.3, 2, p.x, p.y, NODE_R);
+    const baseCol = p.color;
+    grad.addColorStop(0, lighten(baseCol, 0.35));
+    grad.addColorStop(1, darken(baseCol, 0.3));
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 节点边框
+    ctx.strokeStyle = sel ? '#ffffff' : p.color;
+    ctx.lineWidth   = sel ? 3 : 2;
+    ctx.stroke();
+
+    // 高光
+    const shine = ctx.createRadialGradient(p.x - NODE_R*0.35, p.y - NODE_R*0.4, 1, p.x, p.y, NODE_R);
+    shine.addColorStop(0, 'rgba(255,255,255,0.30)');
+    shine.addColorStop(0.5,'rgba(255,255,255,0.06)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, NODE_R, 0, Math.PI*2);
+    ctx.fillStyle = shine;
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    // 头像 or 文字
+    if (p._img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, NODE_R - 2, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(p._img, p.x - NODE_R + 2, p.y - NODE_R + 2, (NODE_R-2)*2, (NODE_R-2)*2);
+      ctx.restore();
+    } else {
+      const displayName = p.name.length > 4 ? p.name.slice(0,3)+'…' : p.name;
+      const fontSize    = displayName.length <= 2 ? 16 : displayName.length === 3 ? 13 : 11;
+      ctx.font         = `bold ${fontSize}px KaiTi, 楷体, STKaiti, serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      // 文字描边（增强可读性）
+      ctx.strokeStyle  = 'rgba(0,0,0,0.55)';
+      ctx.lineWidth    = 3;
+      ctx.lineJoin     = 'round';
+      ctx.strokeText(displayName, p.x, p.y);
+      ctx.fillStyle    = theme.nodeTextColor || '#ffffff';
+      ctx.fillText(displayName, p.x, p.y);
+    }
+
+    // 加密小锁
+    if (p.isEncrypted) {
+      ctx.font      = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#facc15';
+      ctx.fillText('🔒', p.x + NODE_R*0.55, p.y - NODE_R*0.55);
+    }
+
+    ctx.restore();
+  });
+}
+
+// 颜色工具：亮化 / 暗化颜色
+function lighten(hex, amt) {
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.min(255,((n>>16)&0xff)+Math.round(255*amt));
+  const g=Math.min(255,((n>>8)&0xff)+Math.round(255*amt));
+  const b=Math.min(255,(n&0xff)+Math.round(255*amt));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function darken(hex, amt) {
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.max(0,((n>>16)&0xff)-Math.round(255*amt));
+  const g=Math.max(0,((n>>8)&0xff)-Math.round(255*amt));
+  const b=Math.max(0,(n&0xff)-Math.round(255*amt));
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function loop() { tick(); draw(); requestAnimationFrame(loop); }
+loop();
+
+// ══════════════════════════════════════════════════
+//  鼠标交互
+// ══════════════════════════════════════════════════
+let dragging = null, dragOffX = 0, dragOffY = 0, didDrag = false;
+
+function hitTest(mx,my) {
+  for (let i=persons.length-1;i>=0;i--) {
+    const p=persons[i], dx=mx-p.x, dy=my-p.y;
+    if (dx*dx+dy*dy<=NODE_R*NODE_R) return p;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', e => {
+  const {x,y}=canvasPos(e), p=hitTest(x,y);
+  if (p) { dragging=p; dragOffX=x-p.x; dragOffY=y-p.y; didDrag=false; }
+});
+canvas.addEventListener('mousemove', e => {
+  const {x,y}=canvasPos(e);
+  if (dragging) {
+    dragging.x=x-dragOffX; dragging.y=y-dragOffY; dragging.vx=0; dragging.vy=0;
+    if (Math.abs(x-dragOffX-dragging.x+dragOffX)+Math.abs(y-dragOffY-dragging.y+dragOffY)>2) didDrag=true;
+    return;
+  }
+  const p=hitTest(x,y), tt=document.getElementById('tooltip');
+  if (p) {
+    tt.style.display='block';
+    tt.style.left=(e.offsetX+14)+'px'; tt.style.top=(e.offsetY-10)+'px';
+    tt.innerHTML=`<b>${p.name}</b>${p.alias?` <span style="color:#888">(${p.alias})</span>`:''}`
+      +(p.role?`<br><span style="color:#888">${p.role}</span>`:'')
+      +(p.faction?`<br><span style="color:#a78bfa">${p.faction}</span>`:'');
+  } else { tt.style.display='none'; }
+});
+canvas.addEventListener('mouseup', () => { dragging=null; });
+canvas.addEventListener('click', e => {
+  const {x,y}=canvasPos(e), p=hitTest(x,y);
+  if (p) {
+    selectedId=p.id; showDetail(p.id); renderList(); switchTab('detail');
+  } else {
+    selectedId=null;
+    document.getElementById('detail-card').style.display='none';
+    document.getElementById('detail-empty').style.display='block';
+    renderList();
+  }
+});
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const {x,y}=canvasPos(e);
+  if (hitTest(x,y)) return;
+  const name=prompt('新人物姓名：');
+  if (!name||!name.trim()) return;
+  const p={
+    id:nextId++, name:name.trim(), alias:'', faction:'', role:'',
+    gender:'', age:'', birthday:'', height:'', appearance:'',
+    personality:'', background:'', skills:'', goal:'', motto:'', desc:'',
+    color:COLORS[Math.floor(Math.random()*COLORS.length)],
+    avatar:null, isEncrypted:false, _img:null, x, y, vx:0, vy:0
+  };
+  persons.push(p); refreshSelects(); renderList(); renderAllRels();
+});
+
+function canvasPos(e) {
+  const r=canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) };
+}
+
+// ══════════════════════════════════════════════════
+//  预设管理
+// ══════════════════════════════════════════════════
+function makePersons(arr, cxOff=0, cyOff=0) {
+  const cx=W/2||500, cy=H/2||300;
+  return arr.map((s,i) => {
+    const angle=i/arr.length*Math.PI*2, r=s.r||150;
+    return {
+      ...s, _img:null,
+      x: (cx+cxOff)+Math.cos(angle)*r+(Math.random()-.5)*20,
+      y: (cy+cyOff)+Math.sin(angle)*r+(Math.random()-.5)*20,
+      vx:0, vy:0
+    };
+  });
+}
+
+const BUILTIN_PRESETS = {
+  '三国演义': () => {
+    const ps = makePersons([
+      {id:1,name:'刘备',alias:'玄德',faction:'蜀汉',role:'昭烈帝',gender:'男',age:'63',
+       personality:'仁义宽厚、爱民如子、坚韧不拔',background:'汉室宗亲，中山靖王之后，早年卖草鞋为生',
+       goal:'匡扶汉室，恢复汉家天下',skills:'统帅、识人用人',motto:'勿以恶小而为之，勿以善小而不为',
+       color:'#facc15',avatar:null,desc:'蜀汉开国皇帝，三国时期重要君主之一。',r:160},
+      {id:2,name:'诸葛亮',alias:'孔明',faction:'蜀汉',role:'丞相',gender:'男',age:'54',
+       personality:'沉稳睿智、忠心耿耿、多谋善断',background:'琅琊阳都人，号卧龙，躬耕南阳',
+       goal:'北定中原，还于旧都',skills:'军事、政治、发明、诗赋',motto:'鞠躬尽瘁，死而后已',
+       color:'#a78bfa',avatar:null,desc:'字孔明，号卧龙，三国时蜀汉名相。',r:160},
+      {id:3,name:'关羽',alias:'云长',faction:'蜀汉',role:'前将军',gender:'男',age:'58',
+       personality:'忠义勇武、傲骨铮铮、重情重义',background:'河东解良人，早年因杀人出逃',
+       goal:'辅助刘备成就大业',skills:'武艺超群、兵法',motto:'降汉不降曹',
+       color:'#60a5fa',avatar:null,desc:'字云长，万人之敌，义绝，后世尊为武圣。',r:160},
+      {id:4,name:'张飞',alias:'翼德',faction:'蜀汉',role:'车骑将军',gender:'男',age:'55',
+       personality:'勇猛暴烈、豪爽直率、重情义',background:'涿郡人，早年卖酒屠猪',
+       skills:'丈八蛇矛、力大无穷',color:'#fb923c',avatar:null,desc:'字翼德，万人之敌，勇绝。',r:160},
+      {id:5,name:'曹操',alias:'孟德',faction:'曹魏',role:'魏武帝',gender:'男',age:'65',
+       personality:'雄才大略、奸诈多疑、求贤若渴',background:'沛国谯县人，父曹嵩为宦官之后',
+       goal:'统一天下，挟天子以令诸侯',skills:'军事、政治、诗赋',motto:'宁教我负天下人，休教天下人负我',
+       color:'#e94560',avatar:null,desc:'字孟德，一代枭雄，曹魏奠基人。',r:160},
+      {id:6,name:'孙权',alias:'仲谋',faction:'东吴',role:'吴大帝',gender:'男',age:'71',
+       personality:'沉稳内敛、知人善任、审时度势',background:'吴郡富春人，父孙坚、兄孙策奠定基业',
+       goal:'三分天下，守住江东基业',skills:'统帅、外交',
+       color:'#34d399',avatar:null,desc:'字仲谋，东吴大帝，生子当如孙仲谋。',r:160},
+    ]);
+    const [lb,zgl,gy,zf,cao,sq]=ps.map(p=>p.id);
+    const rs=[
+      {id:101,a:lb,b:zgl,label:'君臣',type:'friend',note:'三顾茅庐请出，鱼水之情'},
+      {id:102,a:lb,b:gy, label:'结义兄弟',type:'family',note:'桃园三结义'},
+      {id:103,a:lb,b:zf, label:'结义兄弟',type:'family',note:'桃园三结义'},
+      {id:104,a:gy,b:zf,  label:'结义兄弟',type:'family',note:'桃园三结义'},
+      {id:105,a:zgl,b:gy, label:'同僚',type:'friend',note:'共扶蜀汉'},
+      {id:106,a:lb,b:cao,  label:'对手',type:'rival',note:'汉贼不两立'},
+      {id:107,a:gy,b:cao,  label:'曾降曹',type:'neutral',note:'土山约三事，后归刘'},
+      {id:108,a:lb,b:sq,   label:'孙刘联盟',type:'friend',note:'赤壁之战合作'},
+      {id:109,a:cao,b:sq,  label:'对手',type:'rival',note:'赤壁之战'},
+    ];
+    return { ps, rs, nextId:200 };
+  },
+
+  '红楼梦': () => {
+    const ps = makePersons([
+      {id:1,name:'贾宝玉',alias:'宝二爷',faction:'荣国府',role:'贾母嫡孙',gender:'男',age:'15',
+       personality:'多情温柔、厌恶仕途、才情出众',background:'衔玉而生，荣国府贾政次子',
+       goal:'与红颜知己共度岁月',skills:'诗词、与女儿们交际',motto:'女儿是水做的骨肉',
+       color:'#a78bfa',avatar:null,desc:'《红楼梦》男主角，贾家嫡系，通灵宝玉的拥有者。',r:150},
+      {id:2,name:'林黛玉',alias:'颦颦',faction:'荣国府',role:'贾母外孙女',gender:'女',age:'14',
+       personality:'才情横溢、多愁善感、孤高自傲',background:'苏州人，父林如海，母贾敏，幼年丧母入贾府',
+       goal:'与宝玉白头偕老',skills:'诗词、琴棋',motto:'质本洁来还洁去',
+       color:'#f472b6',avatar:null,desc:'金陵十二钗之首，才情绝世的悲剧人物。',r:150},
+      {id:3,name:'薛宝钗',alias:'宝姐姐',faction:'荣国府',role:'薛家大小姐',gender:'女',age:'15',
+       personality:'端庄大方、博学多才、城府深沉',background:'金陵薛家，母薛姨妈，随母入住荣国府',
+       goal:'嫁入良门，相夫教子',skills:'诗词、女红、处世',motto:'好风凭借力，送我上青云',
+       color:'#facc15',avatar:null,desc:'金陵十二钗之一，与宝玉的金玉良缘。',r:150},
+      {id:4,name:'王熙凤',alias:'凤姐',faction:'荣国府',role:'管家奶奶',gender:'女',age:'25',
+       personality:'精明强干、泼辣爽快、喜弄权术',background:'金陵王家出身，嫁贾琏为妻',
+       goal:'掌管荣国府，维护自身地位',skills:'管理、口才、算计',
+       color:'#e94560',avatar:null,desc:'荣国府实际管家，机关算尽太聪明。',r:150},
+      {id:5,name:'贾母',alias:'老太君',faction:'荣国府',role:'荣国府最高长辈',gender:'女',age:'80',
+       personality:'慈祥宽厚、享乐为先、护短爱孙',background:'史侯家出身，荣国公贾代善之妻',
+       skills:'驭人、享乐',color:'#34d399',avatar:null,desc:'荣国府的实际最高权威，最疼爱宝玉。',r:150},
+    ]);
+    const [baoyu,daiyu,baochai,xifeng,jiamu]=ps.map(p=>p.id);
+    const rs=[
+      {id:101,a:baoyu,b:daiyu,  label:'青梅竹马',type:'friend',note:'木石前盟，前世情缘'},
+      {id:102,a:baoyu,b:baochai,label:'金玉良缘',type:'family',note:'最终成婚，但宝玉心系黛玉'},
+      {id:103,a:daiyu,b:baochai,label:'情敌',type:'rival',note:'同爱宝玉，明争暗斗'},
+      {id:104,a:baoyu,b:jiamu,  label:'祖孙',type:'family',note:'贾母最疼宝玉'},
+      {id:105,a:daiyu,b:jiamu,  label:'外祖孙',type:'family',note:'贾母怜惜林黛玉'},
+      {id:106,a:xifeng,b:jiamu, label:'孙媳',type:'family',note:'王熙凤最会讨贾母欢心'},
+      {id:107,a:xifeng,b:daiyu, label:'照顾',type:'neutral',note:'凤姐曾安排黛玉住处'},
+      {id:108,a:baochai,b:jiamu,label:'孙辈',type:'family',note:'薛姨妈与贾母是姐妹'},
+    ];
+    return { ps, rs, nextId:200 };
+  },
+
+  '空白': () => ({ ps:[], rs:[], nextId:1 }),
+};
+
+const BUILTIN_NAMES = Object.keys(BUILTIN_PRESETS);
+let userPresets = {};
+try { userPresets = JSON.parse(localStorage.getItem('rw_user_presets')||'{}'); } catch(e){}
+let currentPresetName = '三国演义';
+
+function saveUserPresets() {
+  // 不保存 _img（DOM对象无法序列化）
+  const clean = {};
+  for (const [k,v] of Object.entries(userPresets)) {
+    clean[k] = {
+      ps: v.ps.map(p => { const c={...p}; delete c._img; return c; }),
+      rs: v.rs,
+      nextId: v.nextId,
+      isEncrypted: v.isEncrypted
+    };
+  }
+  try { localStorage.setItem('rw_user_presets', JSON.stringify(clean)); } catch(e){}
+}
+
+function refreshPresetSelect() {
+  const sel = document.getElementById('preset-select');
+  const prev = sel.value || currentPresetName;
+  sel.innerHTML = '';
+  const addGroup = (label, names) => {
+    const g = document.createElement('optgroup'); g.label = label;
+    names.forEach(n => {
+      const o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      if (n === prev) o.selected = true;
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  };
+  addGroup('内置预设', BUILTIN_NAMES);
+  const userNames = Object.keys(userPresets);
+  if (userNames.length) addGroup('我的预设', userNames);
+}
+
+function loadPreset() {
+  const name = document.getElementById('preset-select').value;
+  if (!name) return;
+  if (persons.length && !confirm(`加载"${name}"将覆盖当前内容，确定吗？`)) return;
+  applyPreset(name);
+}
+
+function togglePresetEncryption() {
+  const name = document.getElementById('preset-select').value || currentPresetName;
+  if (BUILTIN_NAMES.includes(name)) return alert('内置预设不可加密');
+  if (!userPresets[name]) return;
+  if (userPresets[name].isEncrypted) {
+      if (!verifyPassword()) return;
+      userPresets[name].isEncrypted = false;
+      pbStatus(`已解除预设加密：${name}`);
+  } else {
+      const pwd = getGlobalPassword();
+      if (!pwd) return alert('请先设置全局密码！');
+      userPresets[name].isEncrypted = true;
+      pbStatus(`已加密预设：${name}`);
+  }
+  saveUserPresets();
+}
+
+function applyPreset(name) {
+  let data;
+  if (BUILTIN_PRESETS[name]) {
+    data = BUILTIN_PRESETS[name]();
+  } else if (userPresets[name]) {
+    data = userPresets[name];
+    if (data.isEncrypted && !verifyPassword()) {
+        refreshPresetSelect(); 
+        return;
+    }
+  } else return;
+
+  persons   = data.ps.map(p => ({...p, _img:null}));
+  relations = data.rs.map(r => ({...r}));
+  nextId    = data.nextId || 200;
+  persons.forEach(p => loadAvatarImage(p));
+  selectedId = null;
+  document.getElementById('detail-card').style.display  = 'none';
+  document.getElementById('detail-empty').style.display = 'block';
+  currentPresetName = name;
+  refreshSelects(); renderList(); renderAllRels();
+  pbStatus(`已加载：${name}`);
+}
+
+function saveCurrentPreset() {
+  const name = document.getElementById('preset-select').value || currentPresetName;
+  if (BUILTIN_NAMES.includes(name)) {
+    alert('内置预设不可覆盖，请使用「另存为新预设」');
+    return;
+  }
+  const wasEncrypted = userPresets[name] ? userPresets[name].isEncrypted : false;
+  const clean = persons.map(p => { const c={...p}; delete c._img; return c; });
+  userPresets[name] = { ps: clean, rs:[...relations], nextId, isEncrypted: wasEncrypted };
+  saveUserPresets();
+  refreshPresetSelect();
+  pbStatus(`已保存：${name}`);
+}
+
+function saveAsNewPreset() {
+  const name = prompt('新预设名称：');
+  if (!name||!name.trim()) return;
+  const n = name.trim();
+  if (BUILTIN_NAMES.includes(n)) { alert('与内置预设同名，请换一个名字'); return; }
+  const clean = persons.map(p => { const c={...p}; delete c._img; return c; });
+  userPresets[n] = { ps: clean, rs:[...relations], nextId, isEncrypted: false };
+  saveUserPresets();
+  currentPresetName = n;
+  refreshPresetSelect();
+  document.getElementById('preset-select').value = n;
+  pbStatus(`新预设已保存：${n}`);
+}
+
+function deletePreset() {
+  const name = document.getElementById('preset-select').value;
+  if (BUILTIN_NAMES.includes(name)) { alert('内置预设不可删除'); return; }
+  if (!userPresets[name]) { alert('没有找到该用户预设'); return; }
+  if (userPresets[name].isEncrypted && !verifyPassword()) {
+      refreshPresetSelect();
+      return;
+  }
+  if (!confirm(`确定删除预设"${name}"？`)) return;
+  delete userPresets[name];
+  saveUserPresets();
+  refreshPresetSelect();
+  pbStatus(`已删除：${name}`);
+}
+
+function pbStatus(msg) {
+  const el = document.getElementById('pb-status');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+// ══════════════════════════════════════════════════
+//  初始化
+// ══════════════════════════════════════════════════
+refreshPresetSelect();
+// 初始化自定义关系类型下拉框和列表
+refreshRelTypeSelect();
+renderCustomRelTypeList();
+renderThemeCustomRelColors();
+// 延迟一帧等 canvas 尺寸稳定后再布局
+setTimeout(() => {
+  resize();
+  applyPreset('三国演义');
+}, 50);
+</script>
+</body>
+</html>

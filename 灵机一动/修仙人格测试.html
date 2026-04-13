@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>你是什么修士？</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+button{font-family:inherit;touch-action:manipulation}
+body{
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+  background:linear-gradient(135deg,#0a0015,#1a0030 40%,#05001a);
+  color:#e0d5f0;
+  min-height:100vh;
+  line-height:1.6;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%,rgba(255,255,255,0.6),transparent),
+    radial-gradient(1px 1px at 30% 60%,rgba(255,255,255,0.4),transparent),
+    radial-gradient(1.5px 1.5px at 50% 10%,rgba(255,255,255,0.7),transparent),
+    radial-gradient(1px 1px at 70% 80%,rgba(255,255,255,0.5),transparent),
+    radial-gradient(1px 1px at 90% 40%,rgba(255,255,255,0.6),transparent);
+  background-size:250px 150px;
+  animation:tw 4s ease-in-out infinite alternate;
+  pointer-events:none;z-index:0;
+}
+@keyframes tw{from{opacity:.3}to{opacity:.7}}
+.box{
+  max-width:560px;margin:0 auto;padding:20px 16px 80px;
+  position:relative;z-index:1;
+}
+.cover{text-align:center;padding:80px 16px}
+.cover h1{
+  font-size:1.8em;margin-bottom:8px;
+  background:linear-gradient(135deg,#c084fc,#818cf8,#f0abfc);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.cover .sub{color:#a78bfa;margin-bottom:4px}
+.cover .tip{font-size:.8em;color:#7c6f99;margin-bottom:36px}
+.btn-start{
+  padding:14px 44px;font-size:1.05em;border:none;border-radius:50px;
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  cursor:pointer;box-shadow:0 0 30px rgba(124,58,237,.4);
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-start:active{transform:scale(.97)}
+.prog{
+  position:sticky;top:0;z-index:10;
+  background:rgba(10,0,21,.92);backdrop-filter:blur(8px);
+  padding:12px 0 6px;
+}
+.prog-bar{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7,#f0abfc);border-radius:3px;transition:width .4s}
+.prog-num{font-size:.72em;color:#7c6f99;text-align:right;margin-top:3px}
+.qcard{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:24px 20px;animation:su .4s ease;
+}
+@keyframes su{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.qn{font-size:.78em;color:#a855f7;font-weight:700;margin-bottom:8px}
+.qt{font-size:1em;margin-bottom:16px;color:#ede9fe}
+.opts{display:flex;flex-direction:column;gap:9px}
+.ob{
+  display:block;width:100%;text-align:left;
+  padding:13px 16px;border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;background:rgba(255,255,255,.03);
+  color:#d4c5f0;font-size:.92em;line-height:1.5;
+  cursor:pointer;transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.ob:active{transform:scale(.98)}
+.ob.sel{
+  background:rgba(124,58,237,.22);border-color:#a855f7;
+  color:#f0e6ff;box-shadow:0 0 12px rgba(124,58,237,.2);
+}
+.nav{display:flex;gap:10px;margin-top:18px}
+.nav button{
+  flex:1;padding:13px;border:none;border-radius:10px;
+  font-size:.95em;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.nav .np{background:rgba(255,255,255,.08);color:#a78bfa}
+.nav .nn{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  box-shadow:0 0 16px rgba(124,58,237,.3);
+}
+.nav .nn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+.nav .np:active,.nav .nn:active{transform:scale(.97)}
+.res{text-align:center;padding:40px 8px;animation:fi .7s ease}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.res-icon{font-size:3.6em;margin-bottom:12px}
+.res-name{
+  font-size:1.9em;font-weight:700;margin-bottom:4px;
+  background:linear-gradient(135deg,#c084fc,#f0abfc);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.res-motto{font-size:.9em;color:#a78bfa;font-style:italic;margin-bottom:22px}
+.res-box{
+  text-align:left;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:20px;margin-bottom:18px;
+  font-size:.9em;color:#d4c5f0;line-height:1.8;
+}
+.res-box h3{font-size:.85em;color:#a78bfa;margin-bottom:14px}
+.bi{margin-bottom:9px}
+.bl{display:flex;justify-content:space-between;font-size:.8em;color:#c4b5d9;margin-bottom:3px}
+.bt{height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.bf{height:100%;border-radius:4px;transition:width 1s ease}
+.dual{
+  margin-top:14px;padding:10px 14px;
+  background:rgba(255,255,255,.06);border-radius:10px;
+  font-size:.85em;color:#c4b5f0;
+}
+.btn-re{
+  padding:13px 40px;font-size:.95em;border:none;border-radius:50px;
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  cursor:pointer;margin-top:8px;box-shadow:0 0 24px rgba(124,58,237,.4);
+}
+.btn-re:active{transform:scale(.97)}
+.share{margin-top:14px;font-size:.72em;color:#6b5f80}
+</style>
+</head>
+<body>
+<div class="box">
+  <div id="P0" class="cover">
+    <h1>你是什么修士？</h1>
+    <div class="sub">修仙人格测试</div>
+    <div class="tip">共 40 题 · 凭直觉选 · 不要想太多</div>
+    <button class="btn-start" id="btnGo">开始测试</button>
+  </div>
+  <div id="P1" style="display:none">
+    <div class="prog" id="progWrap">
+      <div class="prog-bar"><div class="prog-fill" id="pf"></div></div>
+      <div class="prog-num" id="pn"></div>
+    </div>
+    <div id="qw"></div>
+    <div class="nav">
+      <button class="np" id="bp" type="button">上一题</button>
+      <button class="nn" id="bn" type="button" disabled>下一题</button>
+    </div>
+  </div>
+  <div id="P2" style="display:none" class="res"></div>
+</div>
+<script>
+var D=[
+{q:"朋友深夜给你发了一大段消息倾诉烦恼，你的第一反应是？",o:[
+["认真看完逐条帮她分析问题",{z:2,l:1}],
+["先问她吃了吗喝水了吗",{f:2}],
+["听完之后想帮她去打那个人",{h:2,f:1}],
+["默默陪着不说太多但一直在",{s:1,z:1}]]},
+{q:"你在藏书阁发现了一本禁书，你会？",o:[
+["翻开看，知识无罪",{z:1,c:1}],
+["先研究它的封印结构",{l:2,u:1}],
+["看看能不能拆了提炼材料",{u:2}],
+["悄悄带走以后可能有用",{d:2}]]},
+{q:"考试前一晚你的状态？",o:[
+["通宵硬背临阵磨枪",{h:1,c:1}],
+["整理笔记画思维导图系统复习",{l:2}],
+["给别人讲题讲着讲着自己也会了",{f:1,l:1}],
+["躺平考多少算多少",{s:2}]]},
+{q:"你更受不了哪种人？",o:[
+["说话拐弯抹角永远不直说的",{h:2}],
+["粗心大意做事不严谨的",{u:1,l:1}],
+["没有同理心对别人痛苦无感的",{z:1,f:1}],
+["自以为能控制一切的",{c:2}]]},
+{q:"一个人走夜路，你的注意力在？",o:[
+["周围所有声音全在监控范围内",{z:1,d:1}],
+["在走神到了才反应过来",{s:2}],
+["看路灯光影觉得有点好看",{s:1,z:1}],
+["手里攥着东西随时准备当武器",{h:2}]]},
+{q:"被分配了完全不擅长的任务？",o:[
+["硬着头皮自己啃不想求人",{h:2}],
+["先查资料研究方法论",{l:2}],
+["找擅长的人合作各取所长",{f:1,l:1}],
+["用我擅长的方式绕着做",{c:1,d:1}]]},
+{q:"有人送你礼物你最在意？",o:[
+["有没有用",{u:2}],
+["好不好看",{s:1,u:1}],
+["对方花了多少心思",{z:2}],
+["是不是我提过想要的",{f:1,z:1}]]},
+{q:"组队副本里你想当什么位置？",o:[
+["输出站最前面打伤害",{h:2}],
+["辅助加血加buff保队友",{f:2}],
+["控制定住敌人让队友输出",{l:2}],
+["指挥安排战术全局掌控",{d:1,l:1}]]},
+{q:"你更容易被什么故事打动？",o:[
+["一个人独自扛完全程",{h:2}],
+["两个人跨越障碍终于理解对方",{z:2}],
+["一群人各有所长改变世界",{l:1,f:1}],
+["安安静静什么都没发生但什么都在发生",{s:2}]]},
+{q:"深夜emo的时候你倾向于？",o:[
+["写东西日记备忘录随便什么",{z:2}],
+["听音乐循环一首歌到天亮",{s:1,z:1}],
+["找信任的人聊",{f:2}],
+["什么都不做等它自己过去",{s:1,c:1}]]},
+{q:"让你选一种武器你选？",o:[
+["剑，利落一击制胜",{h:2}],
+["笔，安静但能杀人于无形",{z:2}],
+["暗器，谁说打架要正面刚",{d:2}],
+["锤，重就是正义",{u:2}]]},
+{q:"你对\u201C规则\u201D的态度？",o:[
+["遵守除非明显不合理",{l:2}],
+["理解之后我决定守不守",{d:1,l:1}],
+["规则是给别人定的",{c:2}],
+["什么规则我在走神",{s:2}]]},
+{q:"到一个陌生城市第一件事？",o:[
+["找吃的",{u:1,h:1}],
+["搞清楚方位和交通",{l:2}],
+["找个安静的地方先缓缓",{z:1,s:1}],
+["随便走看看有什么好玩的",{c:1,s:1}]]},
+{q:"怎么处理跟朋友的矛盾？",o:[
+["直说摊开讲清楚吵完就完了",{h:2}],
+["冷处理等都冷静了再说",{s:1,d:1}],
+["分析到底谁的问题用逻辑说服",{l:2}],
+["主动示好但不认错看对方反应",{f:1,d:1}]]},
+{q:"如果有一种超能力你选？",o:[
+["读心术",{z:2}],
+["时间暂停",{l:1,u:1}],
+["瞬间移动",{c:2}],
+["治愈一切伤痛",{f:2}]]},
+{q:"最可能被师父批评的原因？",o:[
+["太莽了不想就冲",{h:2}],
+["太慢了什么都要想三遍",{l:1,z:1}],
+["太散了注意力不在正事上",{s:2}],
+["太倔了说了不听",{c:2}]]},
+{q:"别人夸你时你的内心活动？",o:[
+["开心但嘴上说还行吧",{h:1,s:1}],
+["怀疑你确定在说我？",{z:2}],
+["分析他是真心还是客套",{d:2}],
+["害羞赶紧转移话题",{f:1,z:1}]]},
+{q:"你更害怕什么？",o:[
+["被遗忘被忽视",{z:2}],
+["失去自由被束缚",{c:2}],
+["辜负别人对我的期望",{f:2}],
+["一直平庸下去没有突破",{h:1,u:1}]]},
+{q:"花了冤枉钱买了没用的东西？",o:[
+["骂自己蠢然后记住教训",{h:1,l:1}],
+["研究它有没有别的用途",{u:2}],
+["反复后悔好几天每次想到都心疼",{z:1,f:1}],
+["算了买了就买了开心就好",{s:2}]]},
+{q:"更喜欢哪种修炼环境？",o:[
+["高山之巅只有风声",{h:1,s:1}],
+["工坊里周围全是工具材料",{u:2}],
+["竹林溪边安静有流水声",{s:1,f:1}],
+["自己的房间门关上谁也别来",{z:2}]]},
+{q:"面对复杂问题你的思路？",o:[
+["拆成小块逐个解决",{l:2}],
+["找核心矛盾抓大放小",{d:1,h:1}],
+["凭直觉选方向先做再说",{c:2}],
+["找有经验的人问不重复造轮子",{f:1,l:1}]]},
+{q:"比赛输了你的第一反应？",o:[
+["不服下次一定赢回来",{h:2}],
+["复盘失误记下来避免重犯",{l:1,u:1}],
+["没什么感觉输赢都暂时的",{s:2}],
+["有点难过但不想让人看到",{z:2}]]},
+{q:"你跟人关系变好的方式？",o:[
+["一起做事做着做着就熟了",{u:1,h:1}],
+["一次深夜长谈",{z:2}],
+["对方关键时刻帮了我一次",{h:1,f:1}],
+["慢慢地不知不觉靠近了",{s:2}]]},
+{q:"你更欣赏哪种前辈？",o:[
+["一剑破万法的绝世高手",{h:2}],
+["救了无数人的医修前辈",{f:2}],
+["桃李满天下的师父",{l:1,f:1}],
+["隐居山林境界极高的散修",{s:2}]]},
+{q:"法器附加一种特效你选？",o:[
+["破防无视防御",{h:2}],
+["溯源追踪任何人的行踪",{d:2}],
+["净化清除所有负面状态",{f:2}],
+["共鸣让对方感受到你的情绪",{z:2}]]},
+{q:"\u201C强大\u201D的定义是？",o:[
+["能保护想保护的人",{h:1,f:1}],
+["不被任何人左右自己的选择",{c:2}],
+["理解世界运转的规律",{l:2}],
+["跌倒了还能站起来",{s:1,h:1}]]},
+{q:"你的房间一般什么状态？",o:[
+["乱但我知道东西在哪",{c:1,u:1}],
+["干净整洁各有其位",{l:2}],
+["看心情有时整齐有时一团糟",{z:1,c:1}],
+["堆满各种收集来的东西像仓库",{u:2}]]},
+{q:"你怎么面对分离？",o:[
+["难过但不说自己消化",{h:1,z:1}],
+["会哭然后擦干眼泪继续走",{f:1,h:1}],
+["反复回忆把每个细节都记住",{z:2}],
+["写点什么留作纪念",{z:1,s:1}]]},
+{q:"在团队里最常扮演的角色？",o:[
+["执行者说干就干",{h:2}],
+["智囊出主意想方案",{l:1,d:1}],
+["润滑剂协调关系解决矛盾",{f:2}],
+["观察者不说话但什么都看到",{z:1,d:1}]]},
+{q:"最不能忍受的修炼方式？",o:[
+["枯坐打坐一动不动三天",{h:1,c:1}],
+["群修一群人互相感应",{z:1,d:1}],
+["反复练同一招一万次",{c:2}],
+["照本宣科不许有自己的理解",{c:1,d:1}]]},
+{q:"受伤的灵兽挡在路上你会？",o:[
+["停下来帮它治不管耽误多久",{f:2}],
+["判断伤势能帮就帮不能就找人",{l:1,f:1}],
+["看看是什么灵兽说不定是机缘",{d:1,u:1}],
+["想帮但不太会在旁边急得转圈",{f:1,z:1}]]},
+{q:"\u201C天赋\u201D和\u201C努力\u201D哪个更重要？",o:[
+["天赋决定上限努力决定下限",{l:2}],
+["都不重要方向对了才重要",{d:2}],
+["努力天赋不够就用时间填",{h:2}],
+["不知道我觉得两个都缺",{s:1,z:1}]]},
+{q:"挑选法器最在意什么？",o:[
+["威力能打才是硬道理",{h:2}],
+["手感拿着要顺",{u:2}],
+["外观好看第一生产力",{s:1,f:1}],
+["契合度要跟我灵力合拍",{z:1,u:1}]]},
+{q:"更喜欢哪种战斗方式？",o:[
+["正面对决一招分胜负",{h:2}],
+["布局在先对手踏入时已经输了",{l:1,d:1}],
+["根本不打用话术让对方自己退",{d:2}],
+["辅助队友让他们最强",{f:2}]]},
+{q:"同门背后说你坏话你知道了？",o:[
+["当面对质不喜欢背后搞",{h:2}],
+["记住了但不说以后会用到",{d:2}],
+["有点受伤但装不知道",{z:1,f:1}],
+["无所谓说就说",{s:2}]]},
+{q:"什么样的日子最舒服？",o:[
+["什么都不做窝着发呆",{s:2}],
+["做了一件很难的事并且做成了",{h:1,u:1}],
+["跟在乎的人待一起不用说话也行",{z:1,f:1}],
+["亲手做出了一个满意的东西",{u:2}]]},
+{q:"最想拥有的一间房？",o:[
+["藏书阁旁边看书方便",{l:1,z:1}],
+["工坊楼上随时动手做东西",{u:2}],
+["后山独栋小院安静没人",{z:1,s:1}],
+["药园旁边采药方便",{f:1,u:1}]]},
+{q:"被困幻境里你怎么出去？",o:[
+["硬破用灵力轰",{h:2}],
+["观察规律找破绽",{l:2}],
+["不急先看看幻境里有什么好玩的",{s:1,c:1}],
+["找到幻境能量源头从内部瓦解",{d:1,u:1}]]},
+{q:"你对\u201C永生\u201D的看法？",o:[
+["活那么久有意思的事也不会变多",{s:2}],
+["如果能记住所有人所有事我愿意",{z:2}],
+["永生是有时间把一件事做到极致",{u:1,l:1}],
+["活到亲手实现一个目标就够了",{h:1,c:1}]]},
+{q:"最后一题。此刻用一个词形容你的状态？",o:[
+["疲惫但还活着",{s:1,h:1}],
+["安静地燃烧着",{c:2}],
+["什么都没想但什么都在感受",{z:2}],
+["随时可以出手",{h:1,d:1}]]}
+];
+
+var R={
+h:{n:"剑修",i:"\u2694\uFE0F",m:"一剑霜寒十四州，宁折不弯",k:"#ef4444",
+t:"你的字典里没有\u201C绕路\u201D二字，遇到问题就正面硬刚，宁折不弯。你看起来很凶，但所有的锋利都是为了保护在乎的人。你不擅长表达感情，但愿意用行动替代一切语言。\n\n修炼建议：偶尔放下剑，不是所有问题都需要你一个人扛。"},
+c:{n:"魔修",i:"\uD83D\uDD25",m:"我命由我不由天，规则是用来打破的",k:"#f97316",
+t:"你骨子里有一股反叛劲，讨厌被规则束缚，讨厌被人安排。你不是坏人，只是不愿意按别人画好的路走。你的能量忽高忽低，状态好的时候能翻天覆地，状态差的时候谁也别来烦你。\n\n修炼建议：自由很重要，但别把所有伸过来的手都打掉。"},
+u:{n:"器修",i:"\uD83D\uDD28",m:"万物皆可炼，亲手造出来的才踏实",k:"#eab308",
+t:"你是动手型选手，比起空谈理论你更喜欢把东西拆开看看里面什么结构。你务实、耐心，别人在争论的时候你已经把东西做出来了。你对\u201C有没有用\u201D的判断高于一切。\n\n修炼建议：不是所有事情都需要有用，偶尔做点没用的事也挺好的。"},
+s:{n:"散修",i:"\uD83C\uDF3F",m:"天地之间一闲人，随遇而安亦是道",k:"#22c55e",
+t:"你不卷、不争、不急。别人以为你躺平了，其实你只是想按自己的节奏走。你很少主动出击，但也很少被真正击倒。你不在意输赢，但在意自在。\n\n修炼建议：随遇而安是天赋，但偶尔也要主动出手，别让机缘从指缝溜走。"},
+l:{n:"阵修",i:"\uD83E\uDDE9",m:"运筹帷幄之中，决胜千里之外",k:"#3b82f6",
+t:"你是谋略型选手，做事之前先画全局。你相信逻辑、相信系统、相信一切都有最优解。别人觉得你慢，但你只是在等最好的时机出手。\n\n修炼建议：不是所有事都能算清楚的，偶尔也要相信直觉。"},
+z:{n:"魂修",i:"\uD83D\uDD2E",m:"世人皆醉你独醒，看透不说透",k:"#a855f7",
+t:"你的感知力是天赋也是诅咒。你总能察觉别人没说出口的情绪，总能看穿话语背后的真实意图。你很少被骗，但你也因此活得比别人累。\n\n修炼建议：感受太多会内耗，记得定期清空自己，不是所有情绪都需要你来背。"},
+f:{n:"医修",i:"\uD83D\uDC9A",m:"但愿世间人无病，何惜架上药生尘",k:"#ec4899",
+t:"你天生共情力极强，别人的痛苦你感同身受，常常忘了自己也需要被照顾。你是朋友圈里的定海神针，谁倒了都来找你，但你倒了的时候却习惯自己扛。\n\n修炼建议：治人先治己，你不必燃烧自己去温暖所有人。"},
+d:{n:"毒修",i:"\uD83D\uDC0D",m:"笑里藏锋，不动则已一击致命",k:"#06b6d4",
+t:"你是最容易被低估的类型。你话不多、存在感不强，但你什么都看在眼里记在心里。你不喜欢正面冲突，但如果有人踩到你的底线，你的反击永远精准致命。\n\n修炼建议：信任别人不会让你变弱，偶尔亮出真心，会有人接住的。"}
+};
+
+function $(id){return document.getElementById(id)}
+var ans=[];for(var i=0;i<40;i++) ans[i]=-1;
+var cur=0;
+
+$("btnGo").onclick=function(){
+  $("P0").style.display="none";
+  $("P1").style.display="";
+  show(0);
+};
+
+function show(n){
+  cur=n;
+  var d=D[n];
+  var pct=Math.round((n/40)*100);
+  $("pf").style.width=pct+"%";
+  $("pn").textContent=(n+1)+" / 40";
+  var h='<div class="qcard"><div class="qn">Q'+(n+1)+'</div><div class="qt">'+d.q+'</div><div class="opts">';
+  for(var j=0;j<d.o.length;j++){
+    h+='<button class="ob'+(ans[n]===j?' sel':'')+'" data-j="'+j+'">'+d.o[j][0]+'</button>';
+  }
+  h+='</div></div>';
+  $("qw").innerHTML=h;
+  $("bp").style.display=n===0?"none":"";
+  $("bn").textContent=n===39?"\u67E5\u770B\u7ED3\u679C":"\u4E0B\u4E00\u9898";
+  $("bn").disabled=ans[n]===-1;
+  var btns=$("qw").querySelectorAll(".ob");
+  for(var j=0;j<btns.length;j++){
+    btns[j].onclick=function(){
+      var idx=parseInt(this.getAttribute("data-j"));
+      ans[cur]=idx;
+      var all=$("qw").querySelectorAll(".ob");
+      for(var k=0;k<all.length;k++) all[k].className="ob";
+      this.className="ob sel";
+      $("bn").disabled=false;
+    };
+  }
+}
+
+$("bp").onclick=function(){if(cur>0) show(cur-1)};
+$("bn").onclick=function(){
+  if(ans[cur]===-1) return;
+  if(cur<39) show(cur+1);
+  else result();
+};
+
+function result(){
+  $("P1").style.display="none";
+  var sc={h:0,c:0,u:0,s:0,l:0,z:0,f:0,d:0};
+  for(var i=0;i<40;i++){
+    if(ans[i]===-1) continue;
+    var pts=D[i].o[ans[i]][1];
+    for(var k in pts) sc[k]+=pts[k];
+  }
+  var arr=[];
+  for(var k in sc) arr.push([k,sc[k]]);
+  arr.sort(function(a,b){return b[1]-a[1]});
+  var mx=arr[0][1]||1;
+  var r=R[arr[0][0]];
+  var dual="";
+  if(arr[1][1]>=arr[0][1]*0.8){
+    var r2=R[arr[1][0]];
+    dual='<div class="dual">\u4F60\u540C\u65F6\u62E5\u6709 <b>'+r.n+'</b> \u548C <b>'+r2.n+'</b> \u7684\u7279\u8D28\uFF0C\u662F\u7F55\u89C1\u7684<b>\u53CC\u4FEE</b>\u4F53\u8D28\uFF01</div>';
+  }
+  var bars="";
+  for(var i=0;i<arr.length;i++){
+    var ri=R[arr[i][0]];
+    var pct=Math.round((arr[i][1]/mx)*100);
+    bars+='<div class="bi"><div class="bl"><span>'+ri.i+" "+ri.n+'</span><span>'+arr[i][1]+'</span></div><div class="bt"><div class="bf" style="width:'+pct+'%;background:'+ri.k+'"></div></div></div>';
+  }
+  $("P2").style.display="";
+  $("P2").className="res";
+  $("P2").innerHTML='<div class="res-icon">'+r.i+'</div><div class="res-name">'+r.n+'</div><div class="res-motto">'+r.m+'</div><div class="res-box">'+r.t.replace(/\n/g,"<br>")+dual+'</div><div class="res-box"><h3>\uD83D\uDCCA \u4F60\u7684\u4FEE\u70BC\u5C5E\u6027\u5206\u5E03</h3>'+bars+'</div><button class="btn-re" onclick="re()">\u91CD\u65B0\u6D4B\u8BD5</button><div class="share">\u622A\u56FE\u5206\u4EAB\u7ED9\u670B\u53CB\uFF0C\u770B\u770B\u4ED6\u4EEC\u662F\u4EC0\u4E48\u4FEE\u58EB</div>';
+}
+
+function re(){
+  for(var i=0;i<40;i++) ans[i]=-1;
+  $("P2").style.display="none";
+  $("P0").style.display="";
+}
+</script>
+</body>
+</html>
