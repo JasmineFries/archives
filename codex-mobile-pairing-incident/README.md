@@ -124,7 +124,7 @@ codex remote-control pair
 
 ### 7. 检查桌面端更新
 
-后来尝试更新 Codex 桌面端，但没有成功更新到更高版本。
+后来尝试更新 Codex 桌面端，但当时没有成功更新到更高版本。
 
 当时检查到的情况是：
 
@@ -135,6 +135,21 @@ codex remote-control pair
 也就是说，全局 CLI 比桌面 App 内置版本更新，不代表桌面端本身已经更新。桌面端能否升级取决于 Microsoft Store 当时是否向该设备/账号推送新版应用包。
 
 这个点容易混淆：`codex` 命令行版本变新，只说明系统 PATH 中的 CLI 变新；桌面端设置页、连接页、内置 app-server 仍可能还是随桌面 App 打包的旧版本。
+
+### 8. 关于“没有 code”的最大嫌疑
+
+后续复盘时，一个很合理的判断是：一直没有真正的配对 code，最大嫌疑是桌面端当时没有更新到新的 ChatGPT/Codex 合并后的桌面包能力。
+
+这个判断不是凭空猜测，依据是：
+
+- 当时桌面端只显示 `com.openai.chat://codex/open` 这种静态打开链接
+- 当时桌面端 UI 没有正常拿到 `pairingCode` 或 `manualPairingCode`
+- 当时桌面端内置 Codex 能力落后于系统里已有的新版 CLI
+- 新版 CLI 已经能看到远程配对相关协议和命令，而旧桌面端没有正常暴露这条路径
+
+所以，更准确的说法是：代理/VPN 问题解释了 `Couldn't enable remote control. Try again`，而桌面端版本滞后很可能解释了为什么后续一直没有生成真正的配对 code。
+
+这两件事是叠加问题，不是互相排斥的问题。
 
 ## 解决方法
 
@@ -187,7 +202,7 @@ remoteControl/pairing/start
 
 第一层是网络层。`Couldn't enable remote control. Try again` 这类报错和代理/VPN 模式有关。使用 VPN 时，应开启全局代理和 TUN 模式，否则 Codex 远程控制需要的连接可能没有被完整代理。
 
-第二层是配对层。网络恢复后，Codex 桌面 UI 仍没有成功生成真正的远程配对码，只显示了用于打开 App 的静态二维码。
+第二层是配对层。网络恢复后，Codex 桌面 UI 仍没有成功生成真正的远程配对码，只显示了用于打开 App 的静态二维码。结合版本差异看，桌面端版本滞后是“没有 code”的最大嫌疑之一。
 
 第三层是版本层。全局 Codex CLI 可以比较新，但桌面端内置 Codex 不一定同步更新；如果 Microsoft Store 没有推送新版桌面包，桌面端仍会停留在当前 Store 版本。
 
@@ -216,7 +231,7 @@ remoteControl/pairing/start
 
 第二个是二维码。桌面端确实显示了二维码，但二维码不等于配对码。只有解码后看到 `pairing_code` 或拿到 `manualPairingCode`，才说明配对信息真的生成成功。
 
-第三个是版本号。CLI 版本和桌面端版本不是同一个东西；CLI 更新不等于桌面 App 更新。
+第三个是版本号。CLI 版本和桌面端版本不是同一个东西；CLI 更新不等于桌面 App 更新。桌面端如果长期没有更新到支持新连接流程的版本，就可能一直停留在只能显示静态打开链接、不能正常生成 code 的状态。
 
 以后如果再次遇到类似问题，可以优先检查五件事：
 
