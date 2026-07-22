@@ -124,15 +124,20 @@ codex remote-control pair
 
 ### 7. 检查桌面端更新
 
-后来尝试更新 Codex 桌面端，但当时没有成功更新到更高版本。
+后来尝试更新 Codex 桌面端，但当时误判为没有更高版本可用。
 
 当时检查到的情况是：
 
 - Microsoft Store / winget 没有报告可用的桌面端更新
-- Microsoft Store 的“获取更新”页面也没有明确推送更高版本
+- Microsoft Store 的“获取更新”页面没有被正确理解或没有明显暴露更新项
+- Agent 侧通过命令行查询商店源时，也没有发现可用升级
 - 桌面 App 内置的 Codex 版本不会跟随全局 Codex CLI 自动更新
 
-也就是说，全局 CLI 比桌面 App 内置版本更新，不代表桌面端本身已经更新。桌面端能否升级取决于 Microsoft Store 当时是否向该设备/账号推送新版应用包。
+后续复盘确认：当时其实是有新版桌面端的，只是因为网络连接、商店源刷新、界面信息不明显等原因，用户和 Agent 都误以为没有新版可更新。
+
+这个误判很关键。它导致排查过程中长期没有把“先更新桌面端”放到最高优先级，而是绕到了代理、本地状态、服务端状态和内部 app-server 调用。
+
+也就是说，全局 CLI 比桌面 App 内置版本更新，不代表桌面端本身已经更新。桌面端能否升级取决于 Microsoft Store 是否成功刷新并向当前设备/账号显示新版应用包。
 
 这个点容易混淆：`codex` 命令行版本变新，只说明系统 PATH 中的 CLI 变新；桌面端设置页、连接页、内置 app-server 仍可能还是随桌面 App 打包的旧版本。
 
@@ -146,6 +151,7 @@ codex remote-control pair
 - 当时桌面端 UI 没有正常拿到 `pairingCode` 或 `manualPairingCode`
 - 当时桌面端内置 Codex 能力落后于系统里已有的新版 CLI
 - 新版 CLI 已经能看到远程配对相关协议和命令，而旧桌面端没有正常暴露这条路径
+- 后续确认桌面端确实可以更新到更高版本，说明“没有新版”这个前提本身是误判
 
 所以，更准确的说法是：代理/VPN 问题解释了 `Couldn't enable remote control. Try again`，而桌面端版本滞后很可能解释了为什么后续一直没有生成真正的配对 code。
 
@@ -153,19 +159,22 @@ codex remote-control pair
 
 ## 解决方法
 
-最终解决分成两部分。
+最终解决分成三部分。
 
 第一部分是网络前置条件：VPN 开启全局代理和 TUN 模式，让 Codex 远程控制相关连接能够完整走代理。这样可以解决 `Couldn't enable remote control. Try again` 这一类远程控制启用失败。
 
-第二部分是配对码生成：绕过桌面 UI 和 Windows daemon 限制，直接启动本机 Codex app-server 的 stdio 接口，然后调用内部远程控制协议。
+第二部分是版本前置条件：确认 Microsoft Store 真的把 ChatGPT/Codex 桌面端更新到当前可用的新版，而不是只看到 CLI 已经是新版。后续复盘认为，这一步应该更早做。
+
+第三部分是临时配对码生成：在桌面端 UI 长期不给 code 的情况下，绕过桌面 UI 和 Windows daemon 限制，直接启动本机 Codex app-server 的 stdio 接口，然后调用内部远程控制协议。
 
 核心思路：
 
 1. 确认 VPN 已开启全局代理和 TUN 模式
-2. 启动本机 app-server
-3. 发送初始化请求
-4. 读取远程控制状态
-5. 调用配对码生成接口
+2. 确认 Microsoft Store 桌面端已更新到当前可用新版
+3. 如果桌面 UI 仍不生成 code，再启动本机 app-server
+4. 发送初始化请求
+5. 读取远程控制状态
+6. 调用配对码生成接口
 
 关键内部方法是：
 
@@ -202,11 +211,11 @@ remoteControl/pairing/start
 
 第一层是网络层。`Couldn't enable remote control. Try again` 这类报错和代理/VPN 模式有关。使用 VPN 时，应开启全局代理和 TUN 模式，否则 Codex 远程控制需要的连接可能没有被完整代理。
 
-第二层是配对层。网络恢复后，Codex 桌面 UI 仍没有成功生成真正的远程配对码，只显示了用于打开 App 的静态二维码。结合版本差异看，桌面端版本滞后是“没有 code”的最大嫌疑之一。
+第二层是配对层。网络恢复后，Codex 桌面 UI 仍没有成功生成真正的远程配对码，只显示了用于打开 App 的静态二维码。结合版本差异和后续更新结果看，桌面端版本滞后是“没有 code”的最大嫌疑。
 
-第三层是版本层。全局 Codex CLI 可以比较新，但桌面端内置 Codex 不一定同步更新；如果 Microsoft Store 没有推送新版桌面包，桌面端仍会停留在当前 Store 版本。
+第三层是版本层。全局 Codex CLI 可以比较新，但桌面端内置 Codex 不一定同步更新；当 Microsoft Store 没有成功刷新或界面没有明显提示时，容易误判为没有新版。后续确认：当时其实有新版桌面端，只是没有被及时发现和安装。
 
-所以反复扫码失败并不是用户操作问题。真正有效的配对信息必须来自 `remoteControl/pairing/start` 返回的 `pairingCode` 或 `manualPairingCode`。
+所以反复扫码失败并不是用户操作问题。真正有效的配对信息必须来自新版桌面端正常生成的配对信息，或来自 `remoteControl/pairing/start` 返回的 `pairingCode` / `manualPairingCode`。
 
 ## 公开存档时已移除的信息
 
@@ -233,10 +242,12 @@ remoteControl/pairing/start
 
 第三个是版本号。CLI 版本和桌面端版本不是同一个东西；CLI 更新不等于桌面 App 更新。桌面端如果长期没有更新到支持新连接流程的版本，就可能一直停留在只能显示静态打开链接、不能正常生成 code 的状态。
 
+还有一个更具体的教训：当 Microsoft Store 或命令行检查显示“没有可用升级”时，这个结论也可能受网络、代理、商店源刷新状态影响。不能只看一次检查结果就排除“桌面端未更新”。
+
 以后如果再次遇到类似问题，可以优先检查五件事：
 
 1. VPN 是否开启全局代理和 TUN 模式
-2. 二维码解码后是否包含 `pairing_code`
-3. 桌面端是否成功调用了 `remoteControl/pairing/start`
-4. app-server 返回里是否存在 `manualPairingCode`
-5. Microsoft Store 是否真的给桌面 App 推送了新版，而不只是 CLI 已更新
+2. Microsoft Store 是否真的刷新到了新版桌面 App，而不只是 CLI 已更新
+3. 二维码解码后是否包含 `pairing_code`
+4. 桌面端是否成功调用了 `remoteControl/pairing/start`
+5. app-server 返回里是否存在 `manualPairingCode`
