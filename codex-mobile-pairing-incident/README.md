@@ -6,7 +6,7 @@
 
 目标很简单：在手机端连接电脑上的 Codex，继续桌面端正在进行的任务，并允许移动端远程控制这台电脑上的 Codex。
 
-最终结果：连接成功。问题不是扫码姿势、手机端账号，也不是单纯代理故障，而是桌面端没有生成真正的远程配对码。
+最终结果：连接成功。问题不是扫码姿势、手机端账号，而是桌面端远程控制初始化没有成功完成。其中 `Couldn't enable remote control. Try again` 这类报错和代理/VPN 模式有关：VPN 需要开启全局代理和 TUN 模式，才能让桌面端的远程控制连接完整走代理。
 
 ## 现象
 
@@ -19,6 +19,8 @@
 ```text
 Couldn't enable remote control. Try again
 ```
+
+这条报错的实际原因是代理/VPN 没有覆盖到 Codex 远程控制需要的网络连接。后续确认：VPN 需要开启全局代理，并开启 TUN 模式。
 
 多次重启、切换代理、重新打开设置页后，二维码看起来会刷新，但手机端仍无法完成配对。
 
@@ -72,7 +74,11 @@ com.openai.chat://codex/open
 
 排查过系统代理和用户环境变量中的代理配置，并确认桌面端可以通过代理连接远程控制 websocket。
 
-日志中能看到 websocket 连接成功，因此最终判断：代理可能影响重连体验，但不是这次配对码缺失的根因。
+这里后来补充确认了一个重要条件：如果使用 VPN，不能只开普通代理端口。为了让 Codex 桌面端远程控制相关连接都被接管，VPN 应开启全局代理和 TUN 模式。
+
+因此，`Couldn't enable remote control. Try again` 更准确地说是代理/VPN 覆盖不完整导致的远程控制启用失败；代理设置修好后，远程控制连接可以建立。
+
+但网络恢复后，桌面 UI 仍然只显示静态二维码，所以还需要继续解决配对码没有生成的问题。
 
 ### 4. 检查服务端状态
 
@@ -118,14 +124,19 @@ codex remote-control pair
 
 ## 解决方法
 
-最终绕过桌面 UI 和 Windows daemon 限制，直接启动本机 Codex app-server 的 stdio 接口，然后调用内部远程控制协议。
+最终解决分成两部分。
+
+第一部分是网络前置条件：VPN 开启全局代理和 TUN 模式，让 Codex 远程控制相关连接能够完整走代理。这样可以解决 `Couldn't enable remote control. Try again` 这一类远程控制启用失败。
+
+第二部分是配对码生成：绕过桌面 UI 和 Windows daemon 限制，直接启动本机 Codex app-server 的 stdio 接口，然后调用内部远程控制协议。
 
 核心思路：
 
-1. 启动本机 app-server
-2. 发送初始化请求
-3. 读取远程控制状态
-4. 调用配对码生成接口
+1. 确认 VPN 已开启全局代理和 TUN 模式
+2. 启动本机 app-server
+3. 发送初始化请求
+4. 读取远程控制状态
+5. 调用配对码生成接口
 
 关键内部方法是：
 
@@ -158,9 +169,11 @@ remoteControl/pairing/start
 
 ## 最终结论
 
-这次问题的根因是：
+这次问题有两个层次：
 
-Codex 桌面 UI 没有成功生成真正的远程配对码，只显示了用于打开 App 的静态二维码。
+第一层是网络层。`Couldn't enable remote control. Try again` 这类报错和代理/VPN 模式有关。使用 VPN 时，应开启全局代理和 TUN 模式，否则 Codex 远程控制需要的连接可能没有被完整代理。
+
+第二层是配对层。网络恢复后，Codex 桌面 UI 仍没有成功生成真正的远程配对码，只显示了用于打开 App 的静态二维码。
 
 所以反复扫码失败并不是用户操作问题。真正有效的配对信息必须来自 `remoteControl/pairing/start` 返回的 `pairingCode` 或 `manualPairingCode`。
 
@@ -181,12 +194,15 @@ Codex 桌面 UI 没有成功生成真正的远程配对码，只显示了用于�
 
 ## 复盘
 
-这次排查里最容易误判的地方是二维码。
+这次排查里最容易误判的地方有两个。
 
-桌面端确实显示了二维码，但二维码不等于配对码。只有解码后看到 `pairing_code` 或拿到 `manualPairingCode`，才说明配对信息真的生成成功。
+第一个是代理状态。普通代理可用不代表 Codex 远程控制的所有连接都已经被接管；使用 VPN 时，全局代理和 TUN 模式是关键前置条件。
 
-以后如果再次遇到类似问题，可以优先检查三件事：
+第二个是二维码。桌面端确实显示了二维码，但二维码不等于配对码。只有解码后看到 `pairing_code` 或拿到 `manualPairingCode`，才说明配对信息真的生成成功。
 
-1. 二维码解码后是否包含 `pairing_code`
-2. 桌面端是否成功调用了 `remoteControl/pairing/start`
-3. app-server 返回里是否存在 `manualPairingCode`
+以后如果再次遇到类似问题，可以优先检查四件事：
+
+1. VPN 是否开启全局代理和 TUN 模式
+2. 二维码解码后是否包含 `pairing_code`
+3. 桌面端是否成功调用了 `remoteControl/pairing/start`
+4. app-server 返回里是否存在 `manualPairingCode`
